@@ -1,0 +1,6 @@
+*.exe
+/.idea
+/cmd/logs
+/tests/logs
+/docs
+logs

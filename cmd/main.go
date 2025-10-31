@@ -1,0 +1,82 @@
+// main.go
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"hserp/internal/bootstrap"
+	"hserp/internal/config"
+	"hserp/internal/xlog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "hserp/docs"
+)
+
+// @title hserp API
+// @version 1.0
+// @description hserp 企业资源计划系统 API 文档
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT认证方式，值为"Bearer {token}"
+
+// @BasePath /
+func main() {
+	defer bootstrap.Close()
+	// 解析命令行参数
+	configPath := flag.String("c", "../config/config.yaml", "Specify the config file path")
+	flag.Parse()
+
+	// 加载配置
+	config, err := config.LoadConfig(*configPath)
+	if err != nil {
+		fmt.Println("Failed to load config: ", err.Error())
+		panic("failed to load config: " + err.Error())
+	}
+
+	// 初始化项目
+	if err := bootstrap.Initialize(config); err != nil {
+		fmt.Println("Project initialization error: ", err.Error())
+		panic("failed to initialize project: " + err.Error())
+	}
+
+	// 创建 http.Server
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", config.Server.Port),
+		Handler: bootstrap.R,
+	}
+
+	r := bootstrap.R // 获取初始化后的gin.Engine
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
+
+	quit := make(chan os.Signal, 1)
+	// kill -SIGINT 或 kill -SIGTERM 会触发优雅关闭 kill <pid> 或 kill -2 <pid>
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		<-quit
+		xlog.Access("Shutting down server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			xlog.Access("Server forced to shutdown: %v", err)
+		}
+		xlog.Access("Server exiting")
+		close(idleConnsClosed)
+	}()
+
+	xlog.Access("Server started on port %d", config.Server.Port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		fmt.Printf("listen: %s\n", err)
+	}
+	<-idleConnsClosed
+}

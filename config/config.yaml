@@ -1,0 +1,22 @@
+# 服务器配置
+server:
+  mode: "debug" # 可选值: debug, release
+  logdir: "./logs" # 日志保存目录
+  port: 8080
+
+# 数据库配置
+database:
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "123456"
+  dbname: "hserp"
+  dialect: "mysql"
+
+# JWT配置
+jwt:
+  secret: "hserp_secret_key"
+  expiry: 24 # 小时
+
+# 自动迁移配置 (默认为false)
+auto_migrate: true
