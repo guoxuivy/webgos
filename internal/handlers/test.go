@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"hserp/internal/database"
-	"hserp/internal/models"
-	"hserp/internal/utils/response"
-	"hserp/internal/xlog"
 	"strconv"
+	"webgos/internal/database"
+	"webgos/internal/models"
+	"webgos/internal/utils/response"
+	"webgos/internal/xlog"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

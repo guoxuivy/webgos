@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"hserp/internal/config"
-	"hserp/internal/dto"
-	"hserp/internal/services"
-	"hserp/internal/utils"
-	"hserp/internal/utils/response"
+	"webgos/internal/config"
+	"webgos/internal/dto"
+	"webgos/internal/services"
+	"webgos/internal/utils"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 )

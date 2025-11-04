@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"fmt"
-	"hserp/internal/dto"
-	"hserp/internal/models"
-	"hserp/internal/services"
-	"hserp/internal/utils"
-	"hserp/internal/utils/response"
+	"webgos/internal/dto"
+	"webgos/internal/models"
+	"webgos/internal/services"
+	"webgos/internal/utils"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 )

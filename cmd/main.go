@@ -5,24 +5,24 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"hserp/internal/bootstrap"
-	"hserp/internal/config"
-	"hserp/internal/xlog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	"webgos/internal/bootstrap"
+	"webgos/internal/config"
+	"webgos/internal/xlog"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	_ "hserp/docs"
+	_ "webgos/docs"
 )
 
-// @title hserp API
+// @title webgos API
 // @version 1.0
-// @description hserp 企业资源计划系统 API 文档
+// @description webgos 企业资源计划系统 API 文档
 
 // @securityDefinitions.apikey BearerAuth
 // @in header

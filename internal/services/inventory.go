@@ -2,8 +2,8 @@ package services
 
 import (
 	"errors"
-	"hserp/internal/database"
-	"hserp/internal/models"
+	"webgos/internal/database"
+	"webgos/internal/models"
 )
 
 // InventoryService 库存服务接口

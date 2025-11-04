@@ -7,9 +7,9 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/patrickmn/go-cache"
 
-	"hserp/internal/config"
-	"hserp/internal/database"
-	"hserp/internal/models"
+	"webgos/internal/config"
+	"webgos/internal/database"
+	"webgos/internal/models"
 )
 
 // 全局缓存实例（过期时间4小时，每10分钟清理一次过期数据）

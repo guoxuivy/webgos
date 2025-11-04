@@ -1,8 +1,8 @@
 package migrate
 
 import (
-	"hserp/internal/database"
-	"hserp/internal/models"
+	"webgos/internal/database"
+	"webgos/internal/models"
 )
 
 // AutoMigrate 执行数据库迁移

@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"hserp/internal/models"
+	"webgos/internal/models"
 )
 
 // 存储注册的路由信息
@@ -52,7 +52,7 @@ func (w *RouterWrapper) DELETE(relativePath string, description string, handlers
 // 支持多个处理函数（包括中间件）
 func (w *RouterWrapper) addRouteInfoWithHandlers(relativePath, method, description string, handlers ...gin.HandlerFunc) {
 	fullPath := w.calculateFullPath(relativePath)
-	
+
 	// 注册处理函数到路由组
 	switch method {
 	case "GET":

@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"hserp/internal/database"
-	"hserp/internal/models"
-	"hserp/internal/utils/response"
 	"net/http"
+	"webgos/internal/database"
+	"webgos/internal/models"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 )

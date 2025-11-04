@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"hserp/internal/utils/response"
-	"hserp/internal/xlog"
 	"time"
+	"webgos/internal/utils/response"
+	"webgos/internal/xlog"
 
 	"github.com/gin-gonic/gin"
 )

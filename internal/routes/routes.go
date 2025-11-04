@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"hserp/internal/config"
-	"hserp/internal/handlers"
+	"webgos/internal/config"
+	"webgos/internal/handlers"
 
-	"hserp/internal/middleware"
-	"hserp/internal/utils/response"
 	"net/http"
+	"webgos/internal/middleware"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 )

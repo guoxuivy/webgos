@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"hserp/internal/utils/response"
 	"net/http"
 	"time"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/patrickmn/go-cache"

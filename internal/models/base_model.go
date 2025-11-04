@@ -2,8 +2,8 @@ package models
 
 import (
 	"database/sql"
-	"hserp/internal/database"
 	"time"
+	"webgos/internal/database"
 
 	"gorm.io/gorm"
 )

@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 
-	"hserp/internal/database"
-	"hserp/internal/dto"
-	"hserp/internal/models"
+	"webgos/internal/database"
+	"webgos/internal/dto"
+	"webgos/internal/models"
 )
 
 // UserService 用户服务接口

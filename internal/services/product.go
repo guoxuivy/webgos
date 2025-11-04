@@ -1,8 +1,8 @@
 package services
 
 import (
-	"hserp/internal/database"
-	"hserp/internal/models"
+	"webgos/internal/database"
+	"webgos/internal/models"
 )
 
 // ProductService 商品服务接口

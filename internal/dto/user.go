@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"hserp/internal/models"
+	"webgos/internal/models"
 )
 
 type UserRegister struct {

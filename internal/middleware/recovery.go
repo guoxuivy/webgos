@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"hserp/internal/utils/response"
-	"hserp/internal/xlog"
 	"net/http"
 	"runtime/debug"
+	"webgos/internal/utils/response"
+	"webgos/internal/xlog"
 
 	"github.com/gin-gonic/gin"
 )

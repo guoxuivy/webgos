@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"hserp/internal/models"
-	"hserp/internal/services"
-	"hserp/internal/utils/response"
+	"webgos/internal/models"
+	"webgos/internal/services"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 )

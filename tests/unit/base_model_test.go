@@ -1,10 +1,10 @@
 package unit
 
 import (
-	"hserp/internal/models"
-	"hserp/internal/xlog"
 	"os"
 	"testing"
+	"webgos/internal/models"
+	"webgos/internal/xlog"
 
 	"github.com/stretchr/testify/assert"
 )

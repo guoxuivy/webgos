@@ -2,13 +2,13 @@ package integration
 
 import (
 	"fmt"
-	"hserp/internal/database"
-	"hserp/internal/models"
-	"hserp/internal/xlog"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+	"webgos/internal/database"
+	"webgos/internal/models"
+	"webgos/internal/xlog"
 
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"

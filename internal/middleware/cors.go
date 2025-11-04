@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"hserp/internal/utils/response"
+	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
 )

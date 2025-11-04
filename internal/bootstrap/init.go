@@ -2,11 +2,11 @@ package bootstrap
 
 import (
 	"fmt"
-	"hserp/internal/config"
-	"hserp/internal/database"
-	"hserp/internal/database/migrate"
-	"hserp/internal/routes"
-	"hserp/internal/xlog"
+	"webgos/internal/config"
+	"webgos/internal/database"
+	"webgos/internal/database/migrate"
+	"webgos/internal/routes"
+	"webgos/internal/xlog"
 
 	"github.com/gin-gonic/gin"
 )

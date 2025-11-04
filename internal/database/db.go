@@ -2,8 +2,8 @@ package database
 
 import (
 	"fmt"
-	"hserp/internal/xlog"
 	"time"
+	"webgos/internal/xlog"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
