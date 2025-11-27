@@ -175,8 +175,7 @@ func (c *BaseModel[T]) getQuery() *gorm.DB {
 		return c.queryHandler
 	}
 	// 默认使用全局的 database.DB
-	c.queryHandler = database.DB
-	return c.queryHandler
+	return database.DB
 }
 
 // Create 创建一条新记录
@@ -404,8 +403,12 @@ func (c *BaseModel[T]) InnerJoins(query string, args ...any) IActiveRecode[T] {
 	return &newQuery
 }
 
-// 事务处理
-// 快捷入口，也可直接使用 database.DB.Transaction
+// Transaction 执行事务操作
+// 提供快捷入口，也可直接使用 database.DB.Transaction
+// 修复：使用当前绑定的数据库连接，尊重已有的事务上下文
+// 注意：错误传播控制需在回调函数中实现，内层事务回调返回nil可隔绝错误传递，外层事务不会回滚
 func (c *BaseModel[T]) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error) {
-	return database.DB.Transaction(fc, opts...)
+	// 使用当前绑定的数据库连接，而不是直接使用全局连接
+	// 这样可以尊重通过WithTx绑定的事务，实现正确的事务嵌套
+	return c.getQuery().Transaction(fc, opts...)
 }

@@ -88,6 +88,7 @@ func TestBaseModelChainableMethods(t *testing.T) {
 // TestBaseModelTransaction 测试 BaseModel 的事务方法
 func TestBaseModelTransaction(t *testing.T) {
 	t.Run("TestTransactionMethod", func(t *testing.T) {
+		// 测试 Transaction 方法是否存在
 		userModel := &models.BaseModel[models.User]{}
 		assert.NotNil(t, userModel.Transaction)
 	})

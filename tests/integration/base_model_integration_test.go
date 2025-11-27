@@ -373,8 +373,8 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 				Email:    "tx3@example.com",
 			}
 			user1.SetPassword("password123")
-			if err := tx.Create(user1).Error; err != nil {
-				return err
+			if createErr := tx.Create(user1).Error; createErr != nil {
+				return createErr
 			}
 
 			// 尝试创建第二个用户，会因为用户名重复而失败
@@ -384,8 +384,8 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 				Email:    "tx4@example.com",
 			}
 			user2.SetPassword("password123")
-			if err := tx.Create(user2).Error; err != nil {
-				return err
+			if createErr := tx.Create(user2).Error; createErr != nil {
+				return createErr
 			}
 
 			return nil
@@ -438,5 +438,266 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 
 		// 清理测试数据
 		userModel.Delete(createdUser.ID)
+	})
+
+	// 事务嵌套功能测试
+	t.Run("TestTransactionNestedFunctionality", func(t *testing.T) {
+		// 创建用户模型实例
+		userModel := &models.BaseModel[models.User]{}
+
+		// 清理测试数据
+		defer database.DB.Where("username LIKE ?", "test_transaction_%").Delete(&models.User{})
+
+		t.Run("TestTransactionRespectsBoundTx", func(t *testing.T) {
+			t.Run("InnerFailureDoesNotAffectOuter", func(t *testing.T) {
+				// 测试场景1: 内层事务失败，外层事务可以选择继续（忽略内层错误）
+				outerErr := database.DB.Transaction(func(tx *gorm.DB) error {
+					// 创建测试用户
+					testUser := &models.User{
+						Username: "test_transaction_outer_continue",
+						Password: "password123",
+						Email:    "outer_continue@test.com",
+					}
+
+					// 使用事务创建用户
+					if createErr := tx.Create(testUser).Error; createErr != nil {
+						return createErr
+					}
+
+					// 使用 WithTx 绑定到外层事务
+					txUserModel := userModel.WithTx(tx)
+
+					// 内层使用 Transaction 方法
+					innerErr := txUserModel.Transaction(func(innerTx *gorm.DB) error {
+						// 创建内层测试用户
+						innerUser := &models.User{
+							Username: "test_transaction_inner_fail",
+							Password: "password123",
+							Email:    "inner_fail@test.com",
+						}
+
+						// 使用内层事务创建用户
+						if createErr := innerTx.Create(innerUser).Error; createErr != nil {
+							return createErr
+						}
+
+						// 故意返回错误，触发内层事务回滚
+						return assert.AnError
+					})
+
+					assert.Error(t, innerErr)
+					return nil // 关键：忽略内层错误，外层继续执行
+				})
+
+				assert.NoError(t, outerErr)
+
+				// 检查数据库状态
+				var outerUserCount int64
+				var innerUserCount int64
+				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer_continue").Count(&outerUserCount)
+				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_inner_fail").Count(&innerUserCount)
+
+				// 验证结果
+				assert.Equal(t, int64(1), outerUserCount, "外层事务的用户应该被成功创建")
+				assert.Equal(t, int64(0), innerUserCount, "内层事务的用户应该被回滚")
+			})
+
+			t.Run("InnerFailurePropagatesToOuter", func(t *testing.T) {
+				// 测试场景2: 内层事务失败，外层事务也应该回滚（传播错误）
+				outerErr := database.DB.Transaction(func(tx *gorm.DB) error {
+					// 创建测试用户
+					testUser := &models.User{
+						Username: "test_transaction_outer_rollback",
+						Password: "password123",
+						Email:    "outer_rollback@test.com",
+					}
+
+					// 使用事务创建用户
+					if createErr := tx.Create(testUser).Error; createErr != nil {
+						return createErr
+					}
+
+					// 使用 WithTx 绑定到外层事务
+					txUserModel := userModel.WithTx(tx)
+
+					// 内层使用 Transaction 方法，并且将错误传播到外层
+					return txUserModel.Transaction(func(innerTx *gorm.DB) error {
+						// 创建内层测试用户
+						innerUser := &models.User{
+							Username: "test_transaction_inner_propagate",
+							Password: "password123",
+							Email:    "inner_propagate@test.com",
+						}
+
+						// 使用内层事务创建用户
+						if createErr := innerTx.Create(innerUser).Error; createErr != nil {
+							return createErr
+						}
+
+						// 故意返回错误，触发内层事务回滚，并且传播到外层
+						return assert.AnError
+					})
+				})
+
+				// 外层事务应该失败
+				assert.Error(t, outerErr)
+
+				// 检查数据库状态 - 两个用户都应该被回滚
+				var outerUserCount int64
+				var innerUserCount int64
+				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer_rollback").Count(&outerUserCount)
+				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_inner_propagate").Count(&innerUserCount)
+
+				// 验证结果
+				assert.Equal(t, int64(0), outerUserCount, "外层事务的用户应该被回滚")
+				assert.Equal(t, int64(0), innerUserCount, "内层事务的用户应该被回滚")
+			})
+		})
+
+		t.Run("TestTransactionWithoutBoundTx", func(t *testing.T) {
+			// 不绑定事务，直接使用Transaction方法
+			err := userModel.Transaction(func(tx *gorm.DB) error {
+				// 创建测试用户
+				testUser := &models.User{
+					Username: "test_transaction_direct",
+					Password: "password123",
+					Email:    "direct@test.com",
+				}
+
+				// 使用事务创建用户
+				return tx.Create(testUser).Error
+			})
+
+			assert.NoError(t, err)
+
+			// 验证用户创建成功
+			var userCount int64
+			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_direct").Count(&userCount)
+			assert.Equal(t, int64(1), userCount, "直接使用Transaction方法应该成功创建用户")
+		})
+
+		t.Run("TestNestedTransactionProperRollback", func(t *testing.T) {
+			// 测试多层嵌套事务的回滚
+			outerErr := database.DB.Transaction(func(outerTx *gorm.DB) error {
+				// 外层创建用户1
+				user1 := &models.User{
+					Username: "test_transaction_outer1",
+					Password: "password123",
+					Email:    "outer1@test.com",
+				}
+				if err := outerTx.Create(user1).Error; err != nil {
+					return err
+				}
+
+				// 第一层嵌套
+				middleErr := userModel.WithTx(outerTx).Transaction(func(middleTx *gorm.DB) error {
+					// 中层创建用户2
+					user2 := &models.User{
+						Username: "test_transaction_middle2",
+						Password: "password123",
+						Email:    "middle2@test.com",
+					}
+					if err := middleTx.Create(user2).Error; err != nil {
+						return err
+					}
+
+					// 第二层嵌套
+					return userModel.WithTx(middleTx).Transaction(func(innerTx *gorm.DB) error {
+						// 内层创建用户3
+						user3 := &models.User{
+							Username: "test_transaction_inner3",
+							Password: "password123",
+							Email:    "inner3@test.com",
+						}
+						if err := innerTx.Create(user3).Error; err != nil {
+							return err
+						}
+
+						// 内层故意失败，应该回滚所有嵌套事务
+						return assert.AnError
+					})
+				})
+
+				return middleErr
+			})
+
+			// 外层事务应该失败（因为内层失败传播）
+			assert.Error(t, outerErr)
+
+			// 验证所有用户都被回滚
+			var user1Count int64
+			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer1").Count(&user1Count)
+
+			var user2Count int64
+			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_middle2").Count(&user2Count)
+
+			var user3Count int64
+			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_inner3").Count(&user3Count)
+
+			assert.Equal(t, int64(0), user1Count, "外层用户应该被回滚")
+			assert.Equal(t, int64(0), user2Count, "中层用户应该被回滚")
+			assert.Equal(t, int64(0), user3Count, "内层用户应该被回滚")
+		})
+
+		t.Run("TestNestedTransactionPartialRollback", func(t *testing.T) {
+			// 测试部分嵌套事务回滚
+			outerErr := database.DB.Transaction(func(outerTx *gorm.DB) error {
+				// 外层创建用户1
+				user1 := &models.User{
+					Username: "test_transaction_outer4",
+					Password: "password123",
+					Email:    "outer4@test.com",
+				}
+				if err := outerTx.Create(user1).Error; err != nil {
+					return err
+				}
+
+				// 第一层嵌套 - 应该成功
+				middleErr := userModel.WithTx(outerTx).Transaction(func(middleTx *gorm.DB) error {
+					// 中层创建用户2
+					user2 := &models.User{
+						Username: "test_transaction_middle5",
+						Password: "password123",
+						Email:    "middle5@test.com",
+					}
+					return middleTx.Create(user2).Error
+				})
+
+				if middleErr != nil {
+					return middleErr
+				}
+
+				// 第二个独立的第一层嵌套 - 应该失败并只回滚自己
+				secondMiddleErr := userModel.WithTx(outerTx).Transaction(func(secondMiddleTx *gorm.DB) error {
+					// 创建冲突的用户
+					conflictUser := &models.User{
+						Username: "test_transaction_outer4", // 与外层用户冲突
+						Password: "password123",
+						Email:    "conflict@test.com",
+					}
+					return secondMiddleTx.Create(conflictUser).Error
+				})
+
+				// 第二个中层事务应该失败，但不影响外层和第一个中层
+				assert.Error(t, secondMiddleErr)
+				return nil // 外层事务应该成功
+			})
+
+			// 外层事务应该成功
+			assert.NoError(t, outerErr)
+
+			// 验证结果
+			var user1Count int64
+			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer4").Count(&user1Count)
+			assert.Equal(t, int64(1), user1Count, "外层用户应该成功创建")
+
+			var user2Count int64
+			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_middle5").Count(&user2Count)
+			assert.Equal(t, int64(1), user2Count, "第一个中层用户应该成功创建")
+
+			var conflictCount int64
+			database.DB.Model(&models.User{}).Where("email = ?", "conflict@test.com").Count(&conflictCount)
+			assert.Equal(t, int64(0), conflictCount, "冲突的用户应该被回滚")
+		})
 	})
 }
