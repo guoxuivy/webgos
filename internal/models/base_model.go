@@ -14,7 +14,7 @@ type IActiveRecord[T any] interface {
 	// WithTx 将查询器与事务对象绑定，用于在事务中执行数据库操作
 	// 参数 tx: 事务对象
 	// 返回值: 绑定了事务对象的模型实例
-	WithTx(tx *gorm.DB) *BaseModel[T]
+	WithTx(tx *gorm.DB) IActiveRecord[T]
 
 	// Transaction 在事务中执行数据库操作
 	// 使用gorm的Transaction方法包装事务操作
@@ -27,6 +27,12 @@ type IActiveRecord[T any] interface {
 	// 参数 item: 要创建的记录对象
 	// 返回值: 创建过程中可能发生的错误
 	Create(item *T) error
+
+	// BatchCreate 批量创建记录
+	// 参数 items: 要创建的记录对象列表
+	// 参数 batchSize: 每批创建的记录数量，默认为100
+	// 返回值: 创建过程中可能发生的错误
+	BatchCreate(items []T, batchSize int) error
 
 	// Read 根据ID读取一条记录
 	// 参数 id: 要读取记录的ID
@@ -47,20 +53,35 @@ type IActiveRecord[T any] interface {
 	// 返回值: 查询到的记录列表和可能发生的错误
 	More() ([]T, error)
 
+	// Pluck 查询单个字段的值
+	// 参数 column: 要查询的字段名
+	// 返回值: 字段值列表和可能发生的错误
+	Pluck(column string) ([]interface{}, error)
+
 	// One 查询单条记录
 	// 返回值: 查询到的记录对象和可能发生的错误
 	One() (*T, error)
+
+	// FirstOrCreate 获取或创建记录
+	// 如果记录存在则获取第一条匹配的记录，否则创建新记录
+	// 参数 item: 要创建的记录对象
+	// 返回值: 查询到或创建的记录对象和可能发生的错误
+	FirstOrCreate(item *T) error
 
 	// Count 统计记录总数
 	// 返回值: 记录总数和可能发生的错误
 	Count() (int, error)
 
+	// Exist 检查记录是否存在
+	// 返回值: 是否存在匹配的记录和可能发生的错误
+	Exist() (bool, error)
+
 	// Page 分页查询记录
 	// 使用gorm的Offset和Limit方法实现分页查询
 	// page: 页数，从1开始
 	// pageSize: 每页记录数
-	// 返回值: 查询到的记录列表和总记录数
-	Page(page, pageSize int) ([]T, int)
+	// 返回值: 查询到的记录列表、总记录数和可能发生的错误
+	Page(page, pageSize int) ([]T, int, error)
 
 	// 链式查询方法start
 
@@ -160,7 +181,7 @@ type BaseModel[T any] struct {
 // 用于在事务中执行数据库操作，创建一个新的模型实例并绑定事务对象
 // 参数 tx: 事务对象
 // 返回值: 绑定了事务对象的新模型实例
-func (c *BaseModel[T]) WithTx(tx *gorm.DB) *BaseModel[T] {
+func (c *BaseModel[T]) WithTx(tx *gorm.DB) IActiveRecord[T] {
 	// 复制当前查询器的所有属性（仅替换 db 为事务对象 tx）
 	newQuery := *c
 	newQuery.queryHandler = tx
@@ -184,6 +205,18 @@ func (c *BaseModel[T]) getQuery() *gorm.DB {
 // 返回值: 创建过程中可能发生的错误
 func (c *BaseModel[T]) Create(item *T) error {
 	return c.getQuery().Create(item).Error
+}
+
+// BatchCreate 批量创建记录
+// 使用gorm的CreateInBatches方法批量创建记录
+// 参数 items: 要创建的记录对象列表
+// batchSize: 每批创建的记录数量，默认为100
+// 返回值: 创建过程中可能发生的错误
+func (c *BaseModel[T]) BatchCreate(items []T, batchSize int) error {
+	if batchSize <= 0 {
+		batchSize = 100 // 默认批次大小
+	}
+	return c.getQuery().CreateInBatches(items, batchSize).Error
 }
 
 // Read 根据ID读取一条记录
@@ -223,6 +256,16 @@ func (c *BaseModel[T]) More() ([]T, error) {
 	return items, err
 }
 
+// Pluck 查询单个字段的值
+// 使用gorm的Pluck方法查询指定字段的值
+// 参数 column: 要查询的字段名
+// 返回值: 字段值列表和可能发生的错误
+func (c *BaseModel[T]) Pluck(column string) ([]interface{}, error) {
+	var values []interface{}
+	err := c.getQuery().Pluck(column, &values).Error
+	return values, err
+}
+
 // One 查询单条记录
 // 使用gorm的Take方法查询第一条匹配的记录
 // 返回值: 查询到的记录对象和可能发生的错误
@@ -232,41 +275,73 @@ func (c *BaseModel[T]) One() (*T, error) {
 	return &item, err
 }
 
+// FirstOrCreate 获取或创建记录
+// 如果记录存在则获取第一条匹配的记录，否则创建新记录
+// 参数 item: 要创建的记录对象
+// 返回值: 查询到或创建的记录对象和可能发生的错误
+func (c *BaseModel[T]) FirstOrCreate(item *T) error {
+	return c.getQuery().FirstOrCreate(item).Error
+}
+
 // Count 统计记录数
 // 使用gorm的Count方法统计匹配条件的记录总数
 // 返回值: 记录总数和可能发生的错误
 func (c *BaseModel[T]) Count() (int, error) {
 	var count int64
-	err := c.getQuery().Model(new(T)).Count(&count).Error
+	// 使用 `(*T)(nil)` 作为模型类型占位，避免分配一个实际的零值对象。
+	// GORM 仅使用传入值的类型信息来确定表名/模型元信息，因此传入一个类型为 `*T` 的 nil 指针
+	// 能够达到同样目的并略微减少一次内存分配。
+	err := c.getQuery().Model((*T)(nil)).Count(&count).Error
 	return int(count), err
+}
+
+// Exist 检查记录是否存在
+// 使用gorm的Take方法检查是否存在匹配的记录
+// 返回值: 是否存在匹配的记录和可能发生的错误
+func (c *BaseModel[T]) Exist() (bool, error) {
+	var item T
+	err := c.getQuery().Take(&item).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // Page 分页查询记录
 // 使用gorm的Offset和Limit方法实现分页查询
 // page: 页数，从1开始
 // pageSize: 每页记录数
-// 返回值: 查询到的记录列表和总记录数
-func (c *BaseModel[T]) Page(page, pageSize int) ([]T, int) {
+// 返回值: 查询到的记录列表、总记录数和可能发生的错误
+func (c *BaseModel[T]) Page(page, pageSize int) ([]T, int, error) {
 	var items []T
 	// 确保页数从1开始
 	if page < 1 {
 		page = 1
 	}
 
-	// 确保每页记录数大于0
+	// 确保每页记录数大于0且不超过1000
 	if pageSize < 1 {
 		pageSize = 10 // 默认每页10条记录
+	} else if pageSize > 1000 {
+		pageSize = 1000 // 最大每页1000条记录
 	}
 
 	total, err := c.Count()
-	if (err != nil) || (total == 0) {
-		return items, total
+	if err != nil {
+		return items, total, err
+	}
+	
+	if total == 0 {
+		return items, total, nil
 	}
 
 	// 计算偏移量 (页数-1)*每页记录数
 	offset := (page - 1) * pageSize
-	c.getQuery().Offset(offset).Limit(pageSize).Find(&items)
-	return items, total
+	err = c.getQuery().Offset(offset).Limit(pageSize).Find(&items).Error
+	return items, total, err
 }
 
 // ------------------------------ gorm核心查询方法包装（链式） ------------------------------

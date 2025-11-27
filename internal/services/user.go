@@ -80,5 +80,10 @@ func (s *userService) UsersPage(query dto.UserQuery) ([]models.User, int) {
 		model = *queryHandle.(*models.User)
 	}
 
-	return model.Preload("Roles").Page(query.Page, query.PageSize)
+	users, total, err := model.Preload("Roles").Page(query.Page, query.PageSize)
+	if err != nil {
+		// 如果出现错误，返回空列表和0总数
+		return []models.User{}, 0
+	}
+	return users, total
 }

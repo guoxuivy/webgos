@@ -253,11 +253,13 @@ func TestBaseModelQueryIntegration(t *testing.T) {
 		}
 
 		// 使用特定条件进行分页查询，确保只查询我们创建的用户
-		users, total := userModel.Where("username LIKE ?", fmt.Sprintf("%s%%", usernamePrefix)).Page(1, 3)
+		users, total, err := userModel.Where("username LIKE ?", fmt.Sprintf("%s%%", usernamePrefix)).Page(1, 3)
+		assert.NoError(t, err)
 		assert.Equal(t, 5, total)
 		assert.Len(t, users, 3)
 
-		users, total = userModel.Where("username LIKE ?", fmt.Sprintf("%s%%", usernamePrefix)).Page(2, 3)
+		users, total, err = userModel.Where("username LIKE ?", fmt.Sprintf("%s%%", usernamePrefix)).Page(2, 3)
+		assert.NoError(t, err)
 		assert.Equal(t, 5, total)
 		assert.Len(t, users, 2)
 
