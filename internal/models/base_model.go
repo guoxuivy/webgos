@@ -8,9 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// IActiveRecode 定义了基础模型的接口，提供通用的数据库操作方法
+// IActiveRecord 定义了基础模型的接口，提供通用的数据库操作方法
 // T 是泛型参数，代表具体的模型类型
-type IActiveRecode[T any] interface {
+type IActiveRecord[T any] interface {
 	// WithTx 将查询器与事务对象绑定，用于在事务中执行数据库操作
 	// 参数 tx: 事务对象
 	// 返回值: 绑定了事务对象的模型实例
@@ -68,71 +68,71 @@ type IActiveRecode[T any] interface {
 	// 参数 query: 查询条件
 	// 参数 args: 查询条件参数
 	// 返回值: 支持链式调用的接口
-	Where(query any, args ...any) IActiveRecode[T]
+	Where(query any, args ...any) IActiveRecord[T]
 
 	// Select 指定要查询的字段
 	// 参数 query: 要查询的字段
 	// 参数 args: 查询字段参数
 	// 返回值: 支持链式调用的接口
-	Select(query any, args ...any) IActiveRecode[T]
+	Select(query any, args ...any) IActiveRecord[T]
 
 	// Preload 预加载关联数据
 	// 参数 query: 关联查询语句
 	// 参数 args: 关联查询参数
 	// 返回值: 支持链式调用的接口
-	Preload(query string, args ...any) IActiveRecode[T]
+	Preload(query string, args ...any) IActiveRecord[T]
 
 	// Order 添加排序条件
 	// 参数 value: 排序条件
 	// 返回值: 支持链式调用的接口
-	Order(value any) IActiveRecode[T]
+	Order(value any) IActiveRecord[T]
 
 	// Not 添加NOT条件
 	// 参数 query: NOT条件
 	// 参数 args: NOT条件参数
 	// 返回值: 支持链式调用的接口
-	Not(query any, args ...any) IActiveRecode[T]
+	Not(query any, args ...any) IActiveRecord[T]
 
 	// Or 添加OR条件
 	// 参数 query: OR条件
 	// 参数 args: OR条件参数
 	// 返回值: 支持链式调用的接口
-	Or(query any, args ...any) IActiveRecode[T]
+	Or(query any, args ...any) IActiveRecord[T]
 
 	// Limit 限制返回记录数
 	// 参数 limit: 限制的记录数
 	// 返回值: 支持链式调用的接口
-	Limit(limit int) IActiveRecode[T]
+	Limit(limit int) IActiveRecord[T]
 
 	// Group 添加分组条件
 	// 参数 query: 分组条件
 	// 返回值: 支持链式调用的接口
-	Group(query string) IActiveRecode[T]
+	Group(query string) IActiveRecord[T]
 
 	// Having 添加分组过滤条件
 	// 参数 query: 分组过滤条件
 	// 参数 args: 分组过滤条件参数
 	// 返回值: 支持链式调用的接口
-	Having(query any, args ...any) IActiveRecode[T]
+	Having(query any, args ...any) IActiveRecord[T]
 
 	// Joins 添加JOIN连接查询
 	// 参数 query: JOIN查询语句
 	// 参数 args: JOIN查询参数
 	// 返回值: 支持链式调用的接口
-	Joins(query string, args ...any) IActiveRecode[T]
+	Joins(query string, args ...any) IActiveRecord[T]
 
 	// InnerJoins 添加INNER JOIN连接查询
 	// 参数 query: INNER JOIN查询语句
 	// 参数 args: INNER JOIN查询参数
 	// 返回值: 支持链式调用的接口
-	InnerJoins(query string, args ...any) IActiveRecode[T]
+	InnerJoins(query string, args ...any) IActiveRecord[T]
 
 	// 链式查询方法end
 }
 
 // BaseModel 基础模型结构体，提供通用的数据库操作功能
 // 使用泛型T来支持不同的模型类型
-// 实现 IActiveRecode 接口
+// 实现 IActiveRecord 接口
 // @property ID int `json:"id" example:"1"` 主键ID
 // @property CreatedAt time.Time `json:"created_at" example:"2023-01-01T00:00:00Z"` 创建时间
 // @property UpdatedAt time.Time `json:"updated_at" example:"2023-01-02T00:00:00Z"` 更新时间
@@ -276,7 +276,7 @@ func (c *BaseModel[T]) Page(page, pageSize int) ([]T, int) {
 // 参数 query: 查询条件
 // 参数 args: 查询条件参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Where(query any, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Where(query any, args ...any) IActiveRecord[T] {
 	// 1. 基于原 db 构建新的 DB 实例（带 where 条件）
 	newDB := c.getQuery().Where(query, args...)
 	// 2. 复制原查询器，替换 db 为新实例
@@ -291,7 +291,7 @@ func (c *BaseModel[T]) Where(query any, args ...any) IActiveRecode[T] {
 // 参数 query: 要查询的字段
 // 参数 args: 查询字段参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Select(query any, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Select(query any, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().Select(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -302,7 +302,7 @@ func (c *BaseModel[T]) Select(query any, args ...any) IActiveRecode[T] {
 // 通过创建新实例实现链式调用，确保并发安全
 // 参数 value: 排序条件
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Order(value any) IActiveRecode[T] {
+func (c *BaseModel[T]) Order(value any) IActiveRecord[T] {
 	newDB := c.getQuery().Order(value)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -314,7 +314,7 @@ func (c *BaseModel[T]) Order(value any) IActiveRecode[T] {
 // 参数 query: 关联查询语句
 // 参数 args: 关联查询参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Preload(query string, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Preload(query string, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().Preload(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -326,7 +326,7 @@ func (c *BaseModel[T]) Preload(query string, args ...any) IActiveRecode[T] {
 // 参数 query: NOT条件
 // 参数 args: NOT条件参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Not(query any, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Not(query any, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().Not(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -338,7 +338,7 @@ func (c *BaseModel[T]) Not(query any, args ...any) IActiveRecode[T] {
 // 参数 query: OR条件
 // 参数 args: OR条件参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Or(query any, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Or(query any, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().Or(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -349,7 +349,7 @@ func (c *BaseModel[T]) Or(query any, args ...any) IActiveRecode[T] {
 // 通过创建新实例实现链式调用，确保并发安全
 // 参数 limit: 限制的记录数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Limit(limit int) IActiveRecode[T] {
+func (c *BaseModel[T]) Limit(limit int) IActiveRecord[T] {
 	newDB := c.getQuery().Limit(limit)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -360,7 +360,7 @@ func (c *BaseModel[T]) Limit(limit int) IActiveRecode[T] {
 // 通过创建新实例实现链式调用，确保并发安全
 // 参数 query: 分组条件
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Group(query string) IActiveRecode[T] {
+func (c *BaseModel[T]) Group(query string) IActiveRecord[T] {
 	newDB := c.getQuery().Group(query)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -372,7 +372,7 @@ func (c *BaseModel[T]) Group(query string) IActiveRecode[T] {
 // 参数 query: 分组过滤条件
 // 参数 args: 分组过滤条件参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Having(query any, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Having(query any, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().Having(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -384,7 +384,7 @@ func (c *BaseModel[T]) Having(query any, args ...any) IActiveRecode[T] {
 // 参数 query: JOIN查询语句
 // 参数 args: JOIN查询参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) Joins(query string, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) Joins(query string, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().Joins(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB
@@ -396,7 +396,7 @@ func (c *BaseModel[T]) Joins(query string, args ...any) IActiveRecode[T] {
 // 参数 query: INNER JOIN查询语句
 // 参数 args: INNER JOIN查询参数
 // 返回值: 支持链式调用的接口
-func (c *BaseModel[T]) InnerJoins(query string, args ...any) IActiveRecode[T] {
+func (c *BaseModel[T]) InnerJoins(query string, args ...any) IActiveRecord[T] {
 	newDB := c.getQuery().InnerJoins(query, args...)
 	newQuery := *c
 	newQuery.queryHandler = newDB

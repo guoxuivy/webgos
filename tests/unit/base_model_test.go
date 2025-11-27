@@ -80,8 +80,8 @@ func TestBaseModelChainableMethods(t *testing.T) {
 	})
 
 	t.Run("TestChainableInterface", func(t *testing.T) {
-		// 验证 BaseModel 实现了 IActiveRecode 接口
-		var _ models.IActiveRecode[models.User] = &models.BaseModel[models.User]{}
+		// 验证 BaseModel 实现了 IActiveRecord 接口
+		var _ models.IActiveRecord[models.User] = &models.BaseModel[models.User]{}
 	})
 }
 

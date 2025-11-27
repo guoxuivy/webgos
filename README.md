@@ -248,12 +248,12 @@ BaseModel 是系统中所有数据模型的基础类，提供了通用的数据�
 - `Page(page, pageSize int) ([]T, error)` - 分页查询
 
 ### 链式查询方法
-- `Where(query any, args ...any) IActiveRecode[T]` - 添加WHERE条件
-- `Select(query any, args ...any) IActiveRecode[T]` - 指定查询字段
-- `Order(value any) IActiveRecode[T]` - 添加排序条件
-- `Limit(limit int) IActiveRecode[T]` - 限制返回记录数
-- `Group(query string) IActiveRecode[T]` - 添加分组条件
-- `Joins(query string, args ...any) IActiveRecode[T]` - 添加JOIN连接查询
+- `Where(query any, args ...any) IActiveRecord[T]` - 添加WHERE条件
+- `Select(query any, args ...any) IActiveRecord[T]` - 指定查询字段
+- `Order(value any) IActiveRecord[T]` - 添加排序条件
+- `Limit(limit int) IActiveRecord[T]` - 限制返回记录数
+- `Group(query string) IActiveRecord[T]` - 添加分组条件
+- `Joins(query string, args ...any) IActiveRecord[T]` - 添加JOIN连接查询
 
 ### 事务方法
 - `Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error)` - 在事务中执行数据库操作
