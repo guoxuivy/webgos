@@ -1,7 +1,7 @@
 # webgos 项目文档
 
 ## 项目概述
-webgos 是一个基于 Go 语言开发的企业web系统快速开发脚手架。该项目采用现代化的开发技术和架构，提供高效、可维护的企业级解决方案。
+webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 Gin 和 GORM，面向可扩展的业务开发。项目目标是提供一套工程化、可测试、可扩展的模板，包含常见的鉴权、日志、请求追踪、事务、分页、统一响应等能力，帮助团队快速落地业务。
 
 ## 项目特点
 - **技术先进**：使用 Go 语言开发，基于 Gin 框架和 GORM ORM 工具
@@ -15,14 +15,14 @@ webgos 是一个基于 Go 语言开发的企业web系统快速开发脚手架。
 - **优雅关闭**：支持服务的优雅启动和关闭
 
 ## 技术栈
-- **编程语言**：Go 1.24.4
-- **Web 框架**：Gin v1.10.1
-- **ORM 框架**：GORM v1.30.0
-- **数据库**：MySQL 驱动（gorm.io/driver/mysql v1.5.2）
-- **配置管理**：YAML 格式（gopkg.in/yaml.v3 v3.0.1）
-- **数据验证**：go-playground/validator v10
-- **API 文档**：Swagger (github.com/swaggo/gin-swagger)
-- **测试框架**：testify (github.com/stretchr/testify)
+- **编程语言**：Go 1.24.x
+- **Web 框架**：Gin
+- **ORM 框架**：GORM
+- **数据库**：MySQL（通过 GORM driver）
+- **配置管理**：YAML（gopkg.in/yaml.v3）
+- **数据验证**：go-playground/validator
+- **API 文档**：Swagger（swaggo）
+- **测试框架**：testify
 
 ## 目录结构
 ```
@@ -97,26 +97,26 @@ webgos/
 ```
 
 ## 主要功能模块
-- **用户管理**：用户注册、登录、登出、JWT认证
+- **用户管理**：用户注册、登录、登出、JWT 认证
 - **产品管理**：产品信息的增删改查
 - **库存管理**：库存记录的查询与更新、出入库操作
-- **权限管理**：基于RBAC的权限控制系统，角色和权限管理
+- **权限管理**：基于 RBAC 的权限控制系统，路由自动注册为权限点
 
 ## 系统架构
 
-本系统采用分层架构设计，遵循标准的MVC模式：
+项目采用分层架构（类似 MVC）：
 
-1. **表现层（Handlers）**：处理HTTP请求和响应，参数验证
-2. **业务逻辑层（Services）**：实现核心业务逻辑
-3. **数据访问层（Models）**：封装数据库操作
-4. **数据传输层（DTO）**：定义接口数据结构
-5. **基础设施层**：包括配置管理、数据库连接、日志系统等
+1. **Handlers（表现层）**：处理 HTTP 请求、参数验证与响应（Gin）
+2. **Services（业务层）**：组织业务逻辑、事务边界、调用模型层
+3. **Models（数据访问层）**：封装对数据库的 CRUD 封装（BaseModel 提供泛型通用实现）
+4. **DTO（数据传输对象）**：处理入参与出参结构定义与验证
+5. **Infrastructure（基础设施）**：配置、数据库连接、日志、middleware 等
 
-各层之间通过接口和依赖注入进行解耦，保证系统的可维护性和可扩展性。
+各层通过接口与注入解耦，便于单元测试与替换实现。
 
-## RBAC权限管理系统
+## RBAC 权限管理系统
 
-本系统采用基于角色的访问控制（RBAC）模型实现权限管理，通过用户、角色和权限的多对多关系，实现灵活的权限控制。
+项目实现基于角色的访问控制（RBAC）。路由在注册时会被收集并同步为权限点，权限标识采用 `路径:HTTP方法`（例如 `/api/products:GET`）。
 
 ### 核心概念
 - **用户（User）**：系统的使用者，可以被分配一个或多个角色
@@ -212,7 +212,8 @@ RequestID -> Recovery -> Logging -> CORS -> JWT -> Auth -> 业务处理 -> Auth 
 
 ## 统一响应格式
 
-系统采用统一的JSON响应格式：
+系统采用统一的 JSON 响应格式：
+
 ```json
 {
   "code": 200,
@@ -221,43 +222,46 @@ RequestID -> Recovery -> Logging -> CORS -> JWT -> Auth -> 业务处理 -> Auth 
 }
 ```
 
-其中：
-- `code`：HTTP状态码或自定义业务状态码
-- `msg`：响应消息，成功时通常为"success"，失败时为错误描述
-- `data`：响应数据，可以是对象、数组或null
+- `code`：优先表示业务状态码（项目约定），同时可映射为 HTTP 状态码；请参阅 `internal/utils/response/response.go` 的实现。
+- `msg`：描述信息
+- `data`：返回的数据体
 
-## BaseModel 核心功能
+注意：项目中已经有 `response` 工具用于统一封装响应，调用方应按照库提供的方法传入明确的 HTTP 状态码与业务码。
 
-BaseModel 是系统中所有数据模型的基础类，提供了通用的数据库操作方法。
+## BaseModel（模型层）说明
 
-### 核心特性
-1. **泛型支持**：使用 Go 的泛型特性支持不同类型的模型
-2. **CRUD 操作**：提供基本的增删改查操作
-3. **链式查询**：支持链式调用构建复杂查询
-4. **事务支持**：提供事务处理方法
-5. **并发安全**：通过创建新实例实现并发安全的链式调用
+`internal/models/base_model.go` 中实现了项目通用的数据访问封装，设计要点与约定：
 
-### 主要方法
-- `Create(item *T) error` - 创建记录
-- `Read(id int) (*T, error)` - 根据ID读取记录
-- `Update(item *T) error` - 更新记录
-- `Delete(id int) error` - 删除记录（软删除）
-- `More() ([]T, error)` - 查询多条记录
-- `One() (*T, error)` - 查询单条记录
-- `Count() (int64, error)` - 统计记录数
-- `Page(page, pageSize int) ([]T, error)` - 分页查询
+- 泛型 `T`：约定为非指针的结构体类型（例如 `User`，而非 `*User`）。在文档与代码注释中声明该约定可避免类型变成 `**T` 的歧义。
+- 显式 Model：在 Count、Page、Exist、More、One、Delete 等需要确定目标模型的操作中，库代码使用 `Model((*T)(nil))` 的写法以保证：不产生额外分配并能识别指针接收器上实现的方法（例如 `TableName()`）。
+- WithCtx / WithTx：提供 `WithCtx`（绑定 `context.Context`）和 `WithTx`（绑定事务 `*gorm.DB`）方法，均返回克隆的 `BaseModel` 实例，便于在请求或事务范围内安全使用。
 
-### 链式查询方法
-- `Where(query any, args ...any) IActiveRecord[T]` - 添加WHERE条件
-- `Select(query any, args ...any) IActiveRecord[T]` - 指定查询字段
-- `Order(value any) IActiveRecord[T]` - 添加排序条件
-- `Limit(limit int) IActiveRecord[T]` - 限制返回记录数
-- `Group(query string) IActiveRecord[T]` - 添加分组条件
-- `Joins(query string, args ...any) IActiveRecord[T]` - 添加JOIN连接查询
+常用方法（示例）
 
-### 事务方法
-- `Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error)` - 在事务中执行数据库操作
-- `WithTx(tx *gorm.DB) *BaseModel[T]` - 将查询器与事务对象绑定
+- `Create(item *T) error`
+- `Read(id int) (*T, error)`
+- `Update(item *T) error`（当前实现使用 GORM `Updates`，仅更新非零值字段；如需覆盖全部字段请使用 `Save`）
+- `Delete(id int) error`（软删除）
+- `More() ([]T, error)`
+- `One() (*T, error)`（返回底层错误，调用方可对 `gorm.ErrRecordNotFound` 做 404 处理）
+- `Count() (int, error)`
+- `Page(page, pageSize int) ([]T, int, error)`（本项目建议 Page 返回 error，以便上层处理 DB 错误）
+
+链式查询示例：
+
+```go
+m := userModel.WithCtx(ctx) // 在 handler 中克隆并绑定请求 ctx
+items, total, err := m.Where("active = ?", 1).Order("id desc").Page(1, 20)
+```
+
+事务示例：
+
+```go
+err := database.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+  m := userModel.WithTx(tx).WithCtx(ctx) // 同时绑定 tx 与 ctx
+  return m.Where("id = ?", id).UpdateByID(id, map[string]any{"name": "new"})
+})
+```
 
 ## 开发与部署
 
@@ -298,64 +302,26 @@ go build -o webgos cmd/main.go
 
 ## 测试
 
-项目包含单元测试和集成测试，位于 [tests](file:///d:/Goroot/webgos/tests/) 目录下。
+项目包含单元测试和集成测试，目录为 `tests/unit` 与 `tests/integration`。注意：直接对 `./tests` 顶层运行 `go test ./tests` 会失败（因为顶层目录没有 Go 包文件），应使用子包路径或 `./...` 模式。
 
-### 单元测试
-
-单元测试位于 [tests/unit](file:///d:/Goroot/webgos/tests/unit/) 目录下，主要测试各个模块的功能：
-
-1. **Handlers测试**：测试HTTP请求处理器函数
-2. **Services测试**：测试业务逻辑层函数
-3. **Models测试**：测试数据访问层函数
-4. **Utils测试**：测试工具函数
-5. **BaseModel测试**：测试基础模型的核心功能
-
-单元测试不依赖外部服务，运行速度快，主要用于测试业务逻辑的正确性。
-
-### 集成测试
-
-集成测试位于 [tests/integration](file:///d:/Goroot/webgos/tests/integration/) 目录下，主要测试需要依赖外部服务的功能：
-
-1. **数据库集成测试**：测试与数据库的交互
-2. **BaseModel集成测试**：测试 BaseModel 的实际数据库操作，包括：
-   - CRUD 操作测试（创建、读取、更新、删除）
-   - 查询操作测试（Where 条件查询、分页查询等）
-   - 链式调用测试（验证链式查询方法的正确性）
-   - 事务操作测试（验证事务的提交和回滚功能）
-
-集成测试需要连接真实的数据库服务，用于验证系统各组件之间的协作是否正常。
-
-### 运行测试
+运行建议：
 
 ```bash
-# 运行所有测试
-go test ./tests/... -v
+# 运行所有测试（包括 tests 下的子包）
+go test ./... -v
 
-# 运行单元测试
+# 仅运行所有单元测试
 go test ./tests/unit/... -v
 
-# 运行集成测试
+# 仅运行所有集成测试
 go test ./tests/integration/... -v
 
-# 运行特定测试
-go test -v ./tests/integration/base_model_integration_test.go -run TestBaseModelCRUDIntegration
-```
-
-### 测试覆盖率
-
-```bash
-# 生成测试覆盖率报告
-go test ./tests/... -coverprofile=coverage.out
-
-# 在浏览器中查看覆盖率报告
+# 生成覆盖率
+go test ./... -coverprofile=coverage.out
 go tool cover -html=coverage.out
 ```
 
-### 测试环境配置
-
-集成测试需要配置数据库连接，当前测试使用与主应用相同的数据库配置进行测试。在实际项目中，应该使用独立的测试数据库以避免影响生产数据。
-
-测试环境会自动初始化日志系统和数据库连接，测试完成后会清理测试数据和关闭连接。
+集成测试会访问数据库，请务必使用独立的测试数据库并在测试完成后清理测试数据。
 
 ## Swagger API 文档
 
@@ -363,19 +329,41 @@ go tool cover -html=coverage.out
 
 - [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
 
-### 使用方法
+## 常用命令
+```bash
+# 安装依赖
+go mod tidy
 
-1. 安装 swag 工具：`go install github.com/swaggo/swag/cmd/swag@latest`
-2. 在项目根目录执行：`swag init -g cmd/main.go`
-3. 启动服务后访问 `http://localhost:8080/swagger/index.html` 查看接口文档
+# 构建（Windows）
+go build -o webgos.exe cmd/main.go
 
-接口注释示例见 `internal/handlers/*.go` 文件。
+# 构建（Linux）
+GOOS=linux GOARCH=amd64 go build -o webgos cmd/main.go
 
-## 日志系统
+# 运行（示例）
+./webgos -c ./config/config.yaml
 
-系统采用自定义日志系统实现结构化日志记录：
+# 安全停止（示例）
+kill <pid>
 
-### 日志级别
+# 后台运行（示例）
+nohup ./webgos -c ./config/config.yaml > /dev/null 2>&1 &
+```
+
+## Swagger 文档生成
+
+如果你需要生成 Swagger 文档并查看接口说明，可以使用 swag 工具（swaggo）。下面是常用的步骤：
+
+```bash
+# 安装 swag（仅需一次）
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# 在项目根目录生成 Swagger 注释（默认会在 ./docs 目录生成）
+swag init -g cmd/main.go
+
+# 生成后启动服务并访问 Swagger UI：
+# 访问: http://localhost:8080/swagger/index.html
+```
 - **ACCESS**：访问日志，记录请求处理信息
 - **INFO**：常规信息日志
 - **ERROR**：错误日志
@@ -400,17 +388,10 @@ go tool cover -html=coverage.out
 
 
 
-## 常用命令
+## 开发命令
 ```bash
-# 安装依赖
-go mod tidy
-# 构建项目
-go build -o webgos.exe cmd/main.go
-#linux 构建
-GOOS=linux GOARCH=amd64 go build -o webgos cmd/main.go
-# 安全停止服务
-kill <pid> 
-# 启动服务
-nohup ./webgos -c ./config.yaml > /dev/null 2>&1 &
+swag init -g cmd/main.go
+
+go run cmd/main.go -c ./config/config.yaml
 
 ```

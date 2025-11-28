@@ -19,4 +19,4 @@ jwt:
   expiry: 24 # 小时
 
 # 自动迁移配置 (默认为false)
-auto_migrate: true
+auto_migrate: false
