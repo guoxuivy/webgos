@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Rbac 中间件用于检查用户权限 RBAC 通过路由节点自动检查
+// RBAC 中间件用于检查用户权限 RBAC 通过路由节点自动检查
 // 该中间件会在请求上下文中查找用户ID，并根据用户ID查询用户的角色和权限
 // 如果用户没有权限访问当前请求的资源，将返回 403 Forbidden 错误
 // 如果用户是管理员角色，则跳过权限检查
@@ -17,7 +17,7 @@ import (
 // 例如：在 JWT 中间件中可以设置用户ID到上下文中：c.Set("user_id", user.ID)
 // 这样在 Rbac 中间件中就可以直接获取到用户ID
 // 如果用户ID不存在或为空，将返回 401 Unauthorized 错误
-func Rbac() gin.HandlerFunc {
+func RBAC() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		user_id, exists := c.Get("user_id")

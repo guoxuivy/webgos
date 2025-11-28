@@ -32,18 +32,22 @@ func WrapRouter(group *gin.RouterGroup) *RouterWrapper {
 
 // 以下是对各种HTTP方法的包装，自动收集路由信息作为权限点
 
+// GET 包装GET方法，自动收集路由信息 支持中间件注入
 func (w *RouterWrapper) GET(relativePath string, description string, handlers ...gin.HandlerFunc) {
 	w.addRouteInfoWithHandlers(relativePath, "GET", description, handlers...)
 }
 
+// POST 包装POST方法，自动收集路由信息 支持中间件注入
 func (w *RouterWrapper) POST(relativePath string, description string, handlers ...gin.HandlerFunc) {
 	w.addRouteInfoWithHandlers(relativePath, "POST", description, handlers...)
 }
 
+// PUT 包装PUT方法，自动收集路由信息 支持中间件注入
 func (w *RouterWrapper) PUT(relativePath string, description string, handlers ...gin.HandlerFunc) {
 	w.addRouteInfoWithHandlers(relativePath, "PUT", description, handlers...)
 }
 
+// DELETE 包装DELETE方法，自动收集路由信息 支持中间件注入
 func (w *RouterWrapper) DELETE(relativePath string, description string, handlers ...gin.HandlerFunc) {
 	w.addRouteInfoWithHandlers(relativePath, "DELETE", description, handlers...)
 }
