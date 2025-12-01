@@ -157,12 +157,12 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 		return nil, err
 	}
 	// 检查是否为超管角色(拥有所有权限)
-	isSuper := false
+	isAdmin := false
 	// 收集用户所有角色的菜单ID
 	menuIDMap := make(map[int]bool)
 	for _, role := range user.Roles {
 		if role.Name == "Super" {
-			isSuper = true
+			isAdmin = true
 		}
 		// 获取角色的菜单ID列表
 		menuIDs := role.GetMenuIDs()
@@ -172,7 +172,7 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 	}
 
 	// 如果没有关联的菜单ID，则返回空列表
-	if !isSuper && len(menuIDMap) == 0 {
+	if !isAdmin && len(menuIDMap) == 0 {
 		return []models.Menu{}, nil
 	}
 
@@ -186,7 +186,7 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 	var menus []models.Menu
 	// button类型的菜单不包含在内，因为它们通常不显示在菜单树中
 	query := database.DB.Where("status = ? AND type != ?", 1, "button")
-	if !isSuper {
+	if !isAdmin {
 		query = query.Where("id IN ?", menuIDs)
 	}
 	if err := query.Find(&menus).Error; err != nil {

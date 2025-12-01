@@ -12,13 +12,13 @@ import (
 	"webgos/internal/models"
 )
 
-// 全局缓存实例（过期时间4小时，每10分钟清理一次过期数据）
+// 全局缓存实例（过期时间24小时，每10分钟清理一次过期数据）
 var tokenCache = cache.New(24*time.Hour, 10*time.Minute)
 
 // AuthService 认证服务接口
 type AuthService interface {
 	Login(username, password string) (string, error)
-	ValidateToken(tokenString string) (jwt.MapClaims, error)
+	ValidateToken(tokenString string) (*jwt.MapClaims, error)
 	Logout(tokenString string)
 }
 
@@ -59,22 +59,30 @@ func (s *authService) Login(username, password string) (string, error) {
 		return "", err
 	}
 
+	// 将令牌存入缓存，设置与令牌相同的过期时间
+	tokenCache.Set(tokenString, true, time.Duration(jwtConfig.Expiry)*time.Hour)
+
 	return tokenString, nil
 }
 
 // ValidateToken 验证JWT令牌
-func (s *authService) ValidateToken(tokenString string) (jwt.MapClaims, error) {
+func (s *authService) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
+	// 检查令牌是否已被登出（从缓存中删除）
+	if _, found := tokenCache.Get(tokenString); !found {
+		return nil, errors.New("令牌已失效")
+	}
+
 	jwtConfig := config.GlobalConfig.JWT
-	// 解析并自动验证令牌
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
 		return []byte(jwtConfig.Secret), nil
 	})
+
 	if err != nil {
-		return nil, err // 包含过期错误、签名错误等
+		return nil, err
 	}
-	// 类型断言并返回
+
 	if claims, ok := token.Claims.(*jwt.MapClaims); ok && token.Valid {
-		return *claims, nil
+		return claims, nil
 	}
 	return nil, errors.New("无效的令牌")
 }

@@ -1,13 +1,21 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 	"webgos/internal/database"
 	"webgos/internal/models"
 	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/patrickmn/go-cache"
 )
+
+// 全局权限缓存实例
+// 缓存用户权限，键为 user_id，值为权限映射 map[string]bool
+// 缓存过期时间：10分钟，清理间隔：30分钟
+var permissionCache = cache.New(10*time.Minute, 30*time.Minute)
 
 // RBAC 中间件用于检查用户权限 RBAC 通过路由节点自动检查
 // 该中间件会在请求上下文中查找用户ID，并根据用户ID查询用户的角色和权限
@@ -27,44 +35,68 @@ func RBAC() gin.HandlerFunc {
 			return
 		}
 
-		// 查询用户及其角色权限
-		// todo 优化：可以将用户角色权限添加缓存，减少数据库查询
-		var user models.User
-		if err := database.DB.Preload("Roles.Permissions").Where("id = ?", user_id).First(&user).Error; err != nil {
-			response.Error(c, "用户不存在", http.StatusUnauthorized)
-			c.Abort()
-			return
+		// 从缓存获取用户权限
+		cacheKey := fmt.Sprintf("permissions:%v", user_id)
+		userPermissions, found := permissionCache.Get(cacheKey)
+		var isAdmin bool
+
+		if !found {
+			// 缓存未命中，查询数据库
+			var user models.User
+			if err := database.DB.Preload("Roles.Permissions").Where("id = ?", user_id).First(&user).Error; err != nil {
+				response.Error(c, "用户不存在", http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
+
+			// 检查是否为管理员角色
+			isAdmin = false
+			for _, role := range user.Roles {
+				if role.Name == "Super" {
+					isAdmin = true
+					break
+				}
+			}
+
+			if isAdmin {
+				// 管理员拥有所有权限，跳过权限检查
+				c.Next()
+				return
+			}
+
+			// 收集用户所有权限
+			permissions := make(map[string]bool)
+			for _, role := range user.Roles {
+				for _, perm := range role.Permissions {
+					key := perm.Path + ":" + perm.Method
+					permissions[key] = true
+				}
+			}
+
+			// 将权限存入缓存
+			permissionCache.Set(cacheKey, permissions, cache.DefaultExpiration)
+			userPermissions = permissions
+		} else {
+			// 缓存命中，直接使用缓存的权限
+			permissionsMap, ok := userPermissions.(map[string]bool)
+			if !ok {
+				// 缓存类型错误，重新查询
+				permissionCache.Delete(cacheKey)
+				c.Next()
+				return
+			}
+			userPermissions = permissionsMap
 		}
 
-		// 检查是否为管理员角色(可以跳过权限检查)
-		isAdmin := false
-		for _, role := range user.Roles {
-			if role.Name == "Super" {
-				isAdmin = true
-				break
-			}
-		}
-		if isAdmin {
-			// 管理员拥有所有权限
-			c.Next()
-			return
-		}
-		//  收集用户所有权限
-		userPermissions := make(map[string]bool)
-		for _, role := range user.Roles {
-			for _, perm := range role.Permissions {
-				key := perm.Path + ":" + perm.Method
-				// key := perm.Name //Name不作为权限验证依据，只为方便作权限点的分组管理
-				userPermissions[key] = true
-			}
-		}
+		// 类型断言，确保userPermissions是map[string]bool类型
+		permissionsMap, _ := userPermissions.(map[string]bool)
 
 		// 检查当前请求是否有权限
 		currentPath := c.FullPath()
 		currentMethod := c.Request.Method
 		requiredPermission := currentPath + ":" + currentMethod
 
-		if userPermissions[requiredPermission] {
+		if permissionsMap[requiredPermission] {
 			c.Next()
 		} else {
 			response.Error(c, "没有访问权限", http.StatusForbidden)
