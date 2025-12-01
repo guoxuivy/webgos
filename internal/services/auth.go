@@ -64,10 +64,7 @@ func (s *authService) Login(username, password string) (string, error) {
 
 // ValidateToken 验证JWT令牌
 func (s *authService) ValidateToken(tokenString string) (jwt.MapClaims, error) {
-	var claims jwt.MapClaims
-
 	jwtConfig := config.GlobalConfig.JWT
-
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return []byte(jwtConfig.Secret), nil
 	})
@@ -78,15 +75,13 @@ func (s *authService) ValidateToken(tokenString string) (jwt.MapClaims, error) {
 
 	// 检查claims
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		// 检查是否自动过期
-		if exp, ok := claims["exp"].(float64); ok {
-			if time.Now().Unix() > int64(exp) {
-				return nil, errors.New("令牌已过期")
-			}
+		//检查是否已经过期
+		if err := claims.Valid(); err != nil {
+			return nil, err
 		}
 		return claims, nil
 	}
-	return claims, errors.New("无效的令牌")
+	return nil, errors.New("无效的令牌")
 }
 
 // 登出：从缓存中删除令牌（使其立即失效）
