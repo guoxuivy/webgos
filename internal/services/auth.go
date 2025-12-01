@@ -65,21 +65,16 @@ func (s *authService) Login(username, password string) (string, error) {
 // ValidateToken 验证JWT令牌
 func (s *authService) ValidateToken(tokenString string) (jwt.MapClaims, error) {
 	jwtConfig := config.GlobalConfig.JWT
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+	// 解析并自动验证令牌
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
 		return []byte(jwtConfig.Secret), nil
 	})
-
-	if err != nil || !token.Valid {
-		return nil, errors.New("无效的令牌")
+	if err != nil {
+		return nil, err // 包含过期错误、签名错误等
 	}
-
-	// 检查claims
-	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		//检查是否已经过期
-		if err := claims.Valid(); err != nil {
-			return nil, err
-		}
-		return claims, nil
+	// 类型断言并返回
+	if claims, ok := token.Claims.(*jwt.MapClaims); ok && token.Valid {
+		return *claims, nil
 	}
 	return nil, errors.New("无效的令牌")
 }
