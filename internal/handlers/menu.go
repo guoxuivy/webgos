@@ -91,32 +91,20 @@ func EditMenu(c *gin.Context) {
 	// 创建菜单服务
 	menuService := services.NewMenuService()
 
-	// 构造菜单模型
-	menu := &models.Menu{
-		Name:      dtoModel.Name,
-		Path:      dtoModel.Path,
-		AuthCode:  dtoModel.AuthCode,
-		Component: dtoModel.Component,
-		Type:      dtoModel.Type,
-		Status:    dtoModel.Status,
-		Pid:       dtoModel.Pid,
-		Meta: models.MenuMeta{
-			Title:              dtoModel.Meta.Title,
-			Icon:               dtoModel.Meta.Icon,
-			AffixTab:           dtoModel.Meta.AffixTab,
-			HideChildrenInMenu: dtoModel.Meta.HideChildrenInMenu,
-			HideInBreadcrumb:   dtoModel.Meta.HideInBreadcrumb,
-			HideInMenu:         dtoModel.Meta.HideInMenu,
-			HideInTab:          dtoModel.Meta.HideInTab,
-			KeepAlive:          dtoModel.Meta.KeepAlive,
-			Order:              dtoModel.Meta.Order,
-			Badge:              dtoModel.Meta.Badge,
-			BadgeType:          dtoModel.Meta.BadgeType,
-			BadgeVariants:      dtoModel.Meta.BadgeVariants,
-			IframeSrc:          dtoModel.Meta.IframeSrc,
-			Link:               dtoModel.Meta.Link,
-		},
+	menu := &models.Menu{}
+	menu, err := menu.Read(dtoModel.ID)
+	if err != nil {
+		response.Error(c, "菜单不存在: "+err.Error())
+		return
 	}
+	menu.Name = dtoModel.Name
+	menu.Path = dtoModel.Path
+	menu.AuthCode = dtoModel.AuthCode
+	menu.Component = dtoModel.Component
+	menu.Type = dtoModel.Type
+	menu.Status = dtoModel.Status
+	menu.Pid = dtoModel.Pid
+	menu.Meta = dtoModel.Meta
 
 	// 更新菜单
 	if err := menuService.UpdateMenu(dtoModel.ID, menu); err != nil {
