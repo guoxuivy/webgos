@@ -244,7 +244,7 @@ func GetRoles(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "获取角色列表成功", gin.H{"items": roles, "total": 4})
+	response.Success(c, "获取角色列表成功", gin.H{"items": roles, "total": len(roles)})
 }
 
 // GetPermissions 获取权限项列表

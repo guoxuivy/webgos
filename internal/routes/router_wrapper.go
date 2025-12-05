@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"webgos/internal/config"
 	"webgos/internal/models"
 )
 
@@ -55,7 +56,6 @@ func (w *RouterWrapper) DELETE(relativePath string, description string, handlers
 // addRouteInfoWithHandlers 是一个内部方法，用于添加路由信息并注册处理函数
 // 支持多个处理函数（包括中间件）
 func (w *RouterWrapper) addRouteInfoWithHandlers(relativePath, method, description string, handlers ...gin.HandlerFunc) {
-	fullPath := w.calculateFullPath(relativePath)
 
 	// 注册处理函数到路由组
 	switch method {
@@ -68,14 +68,18 @@ func (w *RouterWrapper) addRouteInfoWithHandlers(relativePath, method, descripti
 	case "DELETE":
 		w.RouterGroup.DELETE(relativePath, handlers...)
 	}
-
 	// 添加路由信息到routeInfos（只记录路径和方法，不记录中间件）
-	routeInfos = append(routeInfos, RouteInfo{
-		Path:        fullPath,
-		Method:      method,
-		Description: description,
-		Name:        fullPath + ":" + method,
-	})
+	// 仅在配置中启用自动同步RBAC权限点时才收集路由信息
+	if config.GlobalConfig.AutoRBACPoint {
+		fullPath := w.calculateFullPath(relativePath)
+		routeInfos = append(routeInfos, RouteInfo{
+			Path:        fullPath,
+			Method:      method,
+			Description: description,
+			Name:        fullPath + ":" + method,
+		})
+	}
+
 }
 
 // 计算完整的路由路径

@@ -50,7 +50,7 @@ func Initialize(config *config.Config) error {
 	// 注册路由
 	R = routes.SetupRoutes(config)
 
-	// 同步权限到数据库 可根据配置决定是否同步（稳定后没必要每次同步）
+	// 同步权限到数据库（根据配置决定是否收集）
 	if err := routes.SyncPermissions(database.DB); err != nil {
 		panic(fmt.Sprintf("Failed to sync permissions: %v", err))
 	}

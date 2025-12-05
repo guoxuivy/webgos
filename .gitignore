@@ -3,4 +3,5 @@
 /cmd/logs
 /tests/logs
 /docs
+/frontend
 logs

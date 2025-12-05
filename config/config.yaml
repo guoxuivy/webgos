@@ -19,4 +19,6 @@ jwt:
   expiry: 24 # 小时
 
 # 自动迁移配置 (默认为false)
-auto_migrate: false
+auto_migrate: true
+# 自动同步RBAC权限点 (默认为false)
+auto_rbac_point: true

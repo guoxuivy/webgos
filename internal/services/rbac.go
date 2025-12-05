@@ -108,8 +108,10 @@ func (s *rbacService) GetUserRoles(userID int) ([]models.RBACRole, error) {
 
 // GetRoles 获取所有角色列表
 func (s *rbacService) GetRoles() ([]models.RBACRole, error) {
-	var roles []models.RBACRole
-	if err := database.DB.Find(&roles).Error; err != nil {
+
+	model := models.RBACRole{}
+	roles, err := model.More()
+	if err != nil {
 		return nil, err
 	}
 
