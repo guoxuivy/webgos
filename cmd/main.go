@@ -33,7 +33,7 @@ import (
 func main() {
 	defer bootstrap.Close()
 	// 解析命令行参数
-	configPath := flag.String("c", "../config/config.yaml", "Specify the config file path")
+	configPath := flag.String("c", "./config/config.yaml", "Specify the config file path")
 	flag.Parse()
 
 	// 加载配置

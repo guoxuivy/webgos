@@ -14,6 +14,7 @@ type User struct {
 	Password string     `json:"-"`
 	Gender   string     `json:"gender"`
 	Age      int        `json:"age"`
+	Status   int        `gorm:"default:1" json:"status"` // 0: 禁用, 1: 启用
 	Roles    []RBACRole `gorm:"many2many:rbac_user_roles;" json:"roles"`
 }
 
