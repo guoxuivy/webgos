@@ -60,7 +60,7 @@ func AddRole(c *gin.Context) {
 // @Param data body dto.EditRoleDTO true "编辑参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/edit/role [POST]
+// @Router /api/rbac/role [put]
 // EditRole 编辑角色
 // @Security BearerAuth
 func EditRole(c *gin.Context) {

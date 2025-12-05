@@ -74,5 +74,15 @@ func UserEdit(c *gin.Context) {
 		response.Error(c, err.Error())
 		return
 	}
+	roleIds := userRegisterDTO.RoleIds
+	if roleIds != nil {
+		rbacService := services.NewRBACService()
+		err := rbacService.AssignRolesToUser(user.ID, roleIds)
+		if err != nil {
+			response.Error(c, "分配角色失败: "+err.Error())
+			return
+		}
+	}
+
 	response.Success(c, "操作成功", nil)
 }

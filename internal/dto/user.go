@@ -13,7 +13,8 @@ type UserRegister struct {
 	Email    string `json:"email" validate:"omitempty,email" label:"邮箱"`                           //	邮箱
 	Age      int    `json:"age" validate:"omitempty,gte=0,lte=150" label:"年龄"`                     // 年龄
 	Gender   string `json:"gender" validate:"omitempty,oneof=male female" label:"性别"`              // 性别
-	Status   int    `json:"status" validate:"oneof=0 1" label:"状态"`                                // 状态 0禁用 1启用
+	Status   int    `json:"status" validate:"oneof=0 1" label:"状态"`
+	RoleIds  []int  `json:"roleIds" validate:"omitempty,dive,gt=0" label:"角色ID列表"` // 角色ID列表
 }
 
 func (dto *UserRegister) ToModel() models.User {
