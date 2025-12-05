@@ -42,10 +42,10 @@ func init() {
 		rbac := WrapRouter(api.Group("/rbac"))
 		{
 			rbac.POST("/role", "创建角色", handlers.AddRole)
-			rbac.PUT("/role", "编辑角色", handlers.EditRole)
+			rbac.POST("/edit_role", "编辑角色", handlers.EditRole)
 			rbac.GET("/roles", "角色列表", handlers.GetRoles)
-			rbac.POST("/assign/roles", "分配角色给用户", handlers.AssignRoles)
-			rbac.POST("/assign/permissions", "分配权限给角色", handlers.AssignPermissions)
+			rbac.POST("/assign_roles", "分配角色给用户", handlers.AssignRoles)
+			rbac.POST("/assign_permissions", "分配权限给角色", handlers.AssignPermissions)
 			rbac.GET("/permissions", "全部权限项", handlers.GetPermissions)
 			rbac.GET("/role_permissions/:id", "角色权限项", handlers.GetRolePermissions)
 			rbac.GET("/role/:id", "角色详情", handlers.GetRoleByID)

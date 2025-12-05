@@ -49,7 +49,7 @@ func AddProduct(c *gin.Context) {
 // @Param id path int true "商品ID"
 // @Success 200 {object} response.Response{data=models.Product{}}
 // @Failure 400 {object} response.Response
-// @Router /api/products/{id} [get]
+// @Router /api/products/:id [get]
 // GetProductByID 根据 ID 查询商品
 // @Security BearerAuth
 func GetProductByID(c *gin.Context) {

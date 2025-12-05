@@ -60,7 +60,7 @@ func AddRole(c *gin.Context) {
 // @Param data body dto.EditRoleDTO true "编辑参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/role [put]
+// @Router /api/rbac/edit_role [post]
 // EditRole 编辑角色
 // @Security BearerAuth
 func EditRole(c *gin.Context) {
@@ -116,7 +116,7 @@ func EditRole(c *gin.Context) {
 // @Param data body dto.AssignRolesDTO true "分配参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/assign/roles [post]
+// @Router /api/rbac/assign_roles [post]
 // AssignRoles 分配角色给用户
 // @Security BearerAuth
 func AssignRoles(c *gin.Context) {
@@ -146,7 +146,7 @@ func AssignRoles(c *gin.Context) {
 // @Param data body dto.AssignPermissionsDTO true "分配参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/assign/permissions [post]
+// @Router /api/rbac/assign_permissions [post]
 // AssignPermissions 分配权限给角色
 // @Security BearerAuth
 func AssignPermissions(c *gin.Context) {
@@ -175,7 +175,7 @@ func AssignPermissions(c *gin.Context) {
 // @Param id path int true "角色ID"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/role/{id} [get]
+// @Router /api/rbac/role/:id [get]
 // GetRoleByID 根据ID获取角色
 // @Security BearerAuth
 func GetRoleByID(c *gin.Context) {
@@ -204,7 +204,7 @@ func GetRoleByID(c *gin.Context) {
 // @Param id path int true "用户ID"
 // @Success 200 {array} models.RBACRole
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/user/{id}/roles [get]
+// @Router /api/rbac/user_roles/:id [get]
 // GetUserRoles 获取用户的角色
 // @Security BearerAuth
 func GetUserRoles(c *gin.Context) {
@@ -275,7 +275,7 @@ func GetPermissions(c *gin.Context) {
 // @Param id path int true "角色ID"
 // @Success 200 {array} models.RBACPermission
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/role/{id}/permissions [get]
+// @Router /api/rbac/role_permissions/:id [get]
 // @Security BearerAuth
 func GetRolePermissions(c *gin.Context) {
 	var dtoModel dto.GetRolePermissionsDTO

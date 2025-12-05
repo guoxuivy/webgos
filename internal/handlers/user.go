@@ -36,7 +36,7 @@ func UserInfo(c *gin.Context) {
 // @Param data body dto.UserQuery true "用户列表参数"
 // @Success 200 {object} response.Response "data={items: []models.User, total: int}"
 // @Failure 400 {object} response.Response
-// @Router /api/user/list [POST]
+// @Router /api/user/list [post]
 // @Security BearerAuth
 func UsersList(c *gin.Context) {
 	var queryDTO dto.UserQuery
