@@ -391,6 +391,7 @@ swag init -g cmd/main.go
 ## 开发命令
 ```bash
 swag init -g cmd/main.go
+# 访问: http://localhost:8080/swagger/index.html
 
 go run cmd/main.go -c ./config/config.yaml
 
