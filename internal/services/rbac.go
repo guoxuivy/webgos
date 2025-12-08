@@ -110,14 +110,22 @@ func (s *rbacService) GetUserRoles(userID int) ([]models.RBACRole, error) {
 func (s *rbacService) GetRoles() ([]models.RBACRole, error) {
 
 	model := models.RBACRole{}
-	roles, err := model.More()
+	roles, err := model.Preload("Permissions").More()
 	if err != nil {
 		return nil, err
 	}
 
-	// 为每个角色加载菜单ID列表
+	// 为每个角色加载菜单ID列表和权限ID列表
 	for i := range roles {
 		roles[i].Menus = roles[i].GetMenuIDs()
+
+		// 获取权限ID列表
+		permissionIDs := make([]int, len(roles[i].Permissions))
+		for j, perm := range roles[i].Permissions {
+			permissionIDs[j] = perm.ID
+		}
+		roles[i].PermissionIDs = permissionIDs
+		roles[i].Permissions = nil // 清空权限详细信息，避免冗余数据返回
 	}
 
 	return roles, nil

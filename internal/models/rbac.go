@@ -8,13 +8,14 @@ import (
 // RBACRole 角色模型
 type RBACRole struct {
 	BaseModel[RBACRole]
-	Name        string           `gorm:"size:50;unique" json:"name"`
-	Remark      string           `gorm:"size:200" json:"remark"`
-	Status      int              `gorm:"type:tinyint;default:1;comment:状态 0-禁用 1-启用" json:"status"` // 状态 0-禁用 1-启用
-	Permissions []RBACPermission `gorm:"many2many:rbac_role_permissions;" json:"permissions"`
-	Users       []User           `gorm:"many2many:rbac_user_roles;" json:"-"`
-	Menus       []int            `gorm:"-" json:"menus"`              // 菜单ID数组，不直接存储在数据库中
-	MenuIDs     string           `gorm:"column:menu_ids;size:500" json:"-"` // 以逗号分隔的形式存储菜单ID
+	Name          string           `gorm:"size:50;unique" json:"name"`
+	Remark        string           `gorm:"size:200" json:"remark"`
+	Status        int              `gorm:"type:tinyint;default:1;comment:状态 0-禁用 1-启用" json:"status"` // 状态 0-禁用 1-启用
+	Permissions   []RBACPermission `gorm:"many2many:rbac_role_permissions;" json:"permissions"`
+	Users         []User           `gorm:"many2many:rbac_user_roles;" json:"-"`
+	Menus         []int            `gorm:"-" json:"menus"`              // 菜单ID数组，不直接存储在数据库中
+	MenuIDs       string           `gorm:"column:menu_ids;size:500" json:"-"` // 以逗号分隔的形式存储菜单ID
+	PermissionIDs []int            `gorm:"-" json:"permission_ids"`     // 权限ID数组，不直接存储在数据库中
 }
 
 // TableName 指定表名
