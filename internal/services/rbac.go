@@ -5,6 +5,8 @@ import (
 
 	"webgos/internal/database"
 	"webgos/internal/models"
+
+	"gorm.io/gorm"
 )
 
 // RBACService RBAC服务接口
@@ -16,6 +18,7 @@ type RBACService interface {
 	GetRoles() ([]models.RBACRole, error)
 	GetPermissions() ([]models.RBACPermission, error)
 	GetRolePermissions(roleID int) ([]models.RBACPermission, error)
+	DeletePermission(id int) error
 }
 
 // rbacService 实现 RBACService 接口
@@ -147,4 +150,24 @@ func (s *rbacService) GetRolePermissions(roleID int) ([]models.RBACPermission, e
 		return nil, err
 	}
 	return role.Permissions, nil
+}
+
+// DeletePermission 删除权限点
+func (s *rbacService) DeletePermission(id int) error {
+	permission := &models.RBACPermission{}
+	permission.ID = id
+
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 删除角色权限关联数据
+		if err := tx.Where("rbac_permission_id = ?", id).Delete(&models.RBACRolePermission{}).Error; err != nil {
+			return err
+		}
+
+		// 删除权限数据
+		if err := tx.Delete(permission).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

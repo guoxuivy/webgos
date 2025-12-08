@@ -21,7 +21,7 @@ var (
 // 注意：dto必须是指向结构体的指针，以便能够修改其字段值
 func Validate(c *gin.Context, dto any) error {
 	if c.Request.Method == "GET" {
-		return validateUri(c, dto)
+		return ValidateUri(c, dto)
 	}
 	// 数据绑定
 	if err := c.ShouldBind(dto); err != nil {
@@ -40,7 +40,7 @@ func Validate(c *gin.Context, dto any) error {
 // validateUri 使用全局验证器实例验证URI参数DTO
 // 先绑定URI参数，再进行验证
 // 注意：dto必须是指向结构体的指针，以便能够修改其字段值
-func validateUri(c *gin.Context, dto any) error {
+func ValidateUri(c *gin.Context, dto any) error {
 	// URI参数绑定
 	if err := c.ShouldBindUri(dto); err != nil {
 		return err

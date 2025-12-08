@@ -267,6 +267,33 @@ func GetPermissions(c *gin.Context) {
 	response.Success(c, "获取权限项列表成功", permissions)
 }
 
+// DeletePermission 删除权限点
+// @Summary 删除权限点
+// @Description 根据ID删除权限点
+// @Tags RBAC
+// @Produce json
+// @Param id path int true "权限ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Router /api/rbac/permission/:id [delete]
+// @Security BearerAuth
+
+func DeletePermission(c *gin.Context) {
+	var dtoModel dto.DeletePermissionDTO
+	if err := utils.ValidateUri(c, &dtoModel); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+	// 创建角色服务
+	rbacService := services.NewRBACService()
+	err := rbacService.DeletePermission(dtoModel.ID)
+	if err != nil {
+		response.Error(c, "删除权限失败: "+err.Error())
+		return
+	}
+	response.Success(c, "删除权限成功", nil)
+}
+
 // GetRolePermissions 获取角色权限列表
 // @Summary 获取角色权限列表
 // @Description 获取指定角色的所有权限列表

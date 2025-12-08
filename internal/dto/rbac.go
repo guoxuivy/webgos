@@ -48,3 +48,8 @@ type GetUserRolesDTO struct {
 type GetRolePermissionsDTO struct {
 	RoleID int `uri:"id" validate:"required" label:"角色ID"`
 }
+
+// DeletePermissionDTO 删除权限DTO
+type DeletePermissionDTO struct {
+	ID int `uri:"id" validate:"required" label:"权限ID"`
+}
