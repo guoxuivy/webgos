@@ -226,7 +226,6 @@ func GetUserRoles(c *gin.Context) {
 	response.Success(c, "获取用户角色成功", roles)
 }
 
-// GetRoles 获取角色列表
 // @Summary 获取角色列表
 // @Description 获取所有角色列表
 // @Tags RBAC
@@ -235,6 +234,7 @@ func GetUserRoles(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/roles [get]
 // @Security BearerAuth
+// GetRoles 获取角色列表
 func GetRoles(c *gin.Context) {
 	// 创建角色服务
 	rbacService := services.NewRBACService()
@@ -247,7 +247,6 @@ func GetRoles(c *gin.Context) {
 	response.Success(c, "获取角色列表成功", gin.H{"items": roles, "total": len(roles)})
 }
 
-// GetPermissions 获取权限项列表
 // @Summary 获取权限项列表
 // @Description 获取所有权限项列表
 // @Tags RBAC
@@ -256,6 +255,7 @@ func GetRoles(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/permissions [get]
 // @Security BearerAuth
+// GetPermissions 获取权限项列表
 func GetPermissions(c *gin.Context) {
 	// 创建角色服务
 	rbacService := services.NewRBACService()
@@ -267,7 +267,6 @@ func GetPermissions(c *gin.Context) {
 	response.Success(c, "获取权限项列表成功", permissions)
 }
 
-// DeletePermission 删除权限点
 // @Summary 删除权限点
 // @Description 根据ID删除权限点
 // @Tags RBAC
@@ -277,7 +276,7 @@ func GetPermissions(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/permission/:id [delete]
 // @Security BearerAuth
-
+// DeletePermission 删除权限点
 func DeletePermission(c *gin.Context) {
 	var dtoModel dto.DeletePermissionDTO
 	if err := utils.ValidateUri(c, &dtoModel); err != nil {
@@ -294,7 +293,6 @@ func DeletePermission(c *gin.Context) {
 	response.Success(c, "删除权限成功", nil)
 }
 
-// GetRolePermissions 获取角色权限列表
 // @Summary 获取角色权限列表
 // @Description 获取指定角色的所有权限列表
 // @Tags RBAC
@@ -304,6 +302,7 @@ func DeletePermission(c *gin.Context) {
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/role_permissions/:id [get]
 // @Security BearerAuth
+// GetRolePermissions 获取角色权限列表
 func GetRolePermissions(c *gin.Context) {
 	var dtoModel dto.GetRolePermissionsDTO
 

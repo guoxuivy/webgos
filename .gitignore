@@ -2,6 +2,6 @@
 /.idea
 /cmd/logs
 /tests/logs
-/docs
 /frontend
 logs
+/docs/*
