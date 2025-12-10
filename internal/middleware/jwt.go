@@ -41,10 +41,8 @@ func JWT() gin.HandlerFunc {
 		}
 
 		// 将用户信息存入上下文
-		// JWT中的数字默认是float64类型 转换为int类型
 		c.Set("user_id", int((*claims)["user_id"].(float64)))
-		c.Set("username", (*claims)["username"])
-
+		c.Set("username", (*claims)["username"].(string))
 		c.Next()
 	}
 }

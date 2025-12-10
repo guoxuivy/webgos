@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"webgos/internal/config"
 	"webgos/internal/database"
 	"webgos/internal/models"
 	"webgos/internal/utils/response"
@@ -38,8 +39,6 @@ func RBAC() gin.HandlerFunc {
 		// 从缓存获取用户权限
 		cacheKey := fmt.Sprintf("permissions:%v", user_id)
 		userPermissions, found := permissionCache.Get(cacheKey)
-		var isAdmin bool
-
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User
@@ -48,22 +47,11 @@ func RBAC() gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-
-			// 检查是否为管理员角色
-			isAdmin = false
-			for _, role := range user.Roles {
-				if role.Name == "Super" {
-					isAdmin = true
-					break
-				}
-			}
-
-			if isAdmin {
-				// 管理员拥有所有权限，跳过权限检查
+			// 超管跳过权限检查
+			if user.Username == config.GlobalConfig.SuperAccount {
 				c.Next()
 				return
 			}
-
 			// 收集用户所有权限
 			permissions := make(map[string]bool)
 			for _, role := range user.Roles {

@@ -1,5 +1,6 @@
 *.exe
 /.idea
+/.vscode
 /cmd/logs
 /tests/logs
 /frontend
