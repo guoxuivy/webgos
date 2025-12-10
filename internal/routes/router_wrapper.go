@@ -84,14 +84,21 @@ func (w *RouterWrapper) addRouteInfoWithHandlers(relativePath, method, descripti
 
 // 计算完整的路由路径
 func (w *RouterWrapper) calculateFullPath(relativePath string) string {
+	fullPath := "/"
 	// 处理根路径的特殊情况
 	if w.BasePath() == "/" && relativePath == "/" {
-		return "/"
+		return fullPath
 	}
-	// 拼接基础路径和相对路径，去除重复的斜杠
-	fullPath := strings.TrimSuffix(w.BasePath(), "/") + "/" + strings.TrimPrefix(relativePath, "/")
-	// 统一输出小写,去除结尾斜杠
-	return strings.ToLower(strings.TrimSuffix(fullPath, "/"))
+
+	// 去除基础路径和相对路径末尾的多余斜杠
+	basePath := strings.TrimSuffix(w.BasePath(), "/")
+	if relativePath == "" {
+		fullPath = basePath
+	} else {
+		fullPath = basePath + "/" + strings.TrimPrefix(relativePath, "/")
+	}
+	// 统一输出小写
+	return strings.ToLower(fullPath)
 }
 
 // SyncPermissions 将收集的路由信息同步到数据库作为权限点
