@@ -16,14 +16,14 @@ import (
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Param data body dto.AddMenuDTO true "菜单参数"
+// @Param data body dto.MenuDTO true "菜单参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/menu/add [post]
 // AddMenu 创建菜单
 // @Security BearerAuth
 func AddMenu(c *gin.Context) {
-	var dtoModel dto.AddMenuDTO
+	var dtoModel dto.MenuDTO
 
 	if err := utils.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
@@ -75,14 +75,23 @@ func AddMenu(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "菜单ID"
-// @Param data body dto.EditMenuDTO true "菜单参数"
+// @Param data body dto.MenuDTO true "菜单参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/menu/edit [post]
 // EditMenu 编辑菜单
 // @Security BearerAuth
 func EditMenu(c *gin.Context) {
-	var dtoModel dto.EditMenuDTO
+	var uri struct {
+		ID int `uri:"id" binding:"required,min=1"`
+	}
+	// 绑定路径参数
+	if err := c.ShouldBindUri(&uri); err != nil {
+		response.Error(c, "无效的菜单ID: "+err.Error())
+		return
+	}
+
+	var dtoModel dto.MenuDTO
 	if err := utils.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
@@ -92,7 +101,7 @@ func EditMenu(c *gin.Context) {
 	menuService := services.NewMenuService()
 
 	menu := &models.Menu{}
-	menu, err := menu.Read(dtoModel.ID)
+	menu, err := menu.Read(uri.ID)
 	if err != nil {
 		response.Error(c, "菜单不存在: "+err.Error())
 		return
@@ -107,11 +116,10 @@ func EditMenu(c *gin.Context) {
 	menu.Meta = dtoModel.Meta
 
 	// 更新菜单
-	if err := menuService.UpdateMenu(dtoModel.ID, menu); err != nil {
+	if err := menuService.UpdateMenu(uri.ID, menu); err != nil {
 		response.Error(c, "编辑菜单失败: "+err.Error())
 		return
 	}
-
 	response.Success(c, "编辑菜单成功", nil)
 }
 
@@ -127,17 +135,11 @@ func EditMenu(c *gin.Context) {
 // DeleteMenu 删除菜单
 // @Security BearerAuth
 func DeleteMenu(c *gin.Context) {
-	var dtoModel dto.DeleteMenuDTO
-	if err := c.ShouldBindUri(&dtoModel); err != nil {
-		response.Error(c, err.Error())
-		return
-	}
-
+	ID := utils.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
-
 	// 删除菜单
-	if err := menuService.DeleteMenu(dtoModel.ID); err != nil {
+	if err := menuService.DeleteMenu(ID); err != nil {
 		response.Error(c, "删除菜单失败: "+err.Error())
 		return
 	}
@@ -157,17 +159,11 @@ func DeleteMenu(c *gin.Context) {
 // GetMenuByID 获取菜单详情
 // @Security BearerAuth
 func GetMenuByID(c *gin.Context) {
-	var dtoModel dto.GetMenuDTO
-	if err := c.ShouldBindUri(&dtoModel); err != nil {
-		response.Error(c, err.Error())
-		return
-	}
-
+	ID := utils.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
-
 	// 获取菜单
-	menu, err := menuService.GetMenuByID(dtoModel.ID)
+	menu, err := menuService.GetMenuByID(ID)
 	if err != nil {
 		response.Error(c, "获取菜单失败: "+err.Error())
 		return

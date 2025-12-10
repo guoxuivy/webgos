@@ -2,8 +2,8 @@ package dto
 
 import "webgos/internal/models"
 
-// AddMenuDTO 添加菜单DTO
-type AddMenuDTO struct {
+// 菜单DTO
+type MenuDTO struct {
 	Name      string          `json:"name" validate:"required" label:"菜单名称"`
 	Path      string          `json:"path" validate:"omitempty" label:"路由路径"`
 	AuthCode  string          `json:"authCode" validate:"omitempty" label:"权限标识"`
@@ -12,27 +12,4 @@ type AddMenuDTO struct {
 	Status    int             `json:"status" validate:"required,oneof=0 1" label:"状态"` // 0-禁用 1-启用
 	Meta      models.MenuMeta `json:"meta" validate:"required" label:"菜单元数据"`
 	Pid       int             `json:"pid" validate:"omitempty" label:"父级菜单ID"`
-}
-
-// EditMenuDTO 编辑菜单DTO
-type EditMenuDTO struct {
-	ID        int             `json:"id" validate:"required" label:"菜单ID"`
-	Name      string          `json:"name" validate:"required" label:"菜单名称"`
-	Path      string          `json:"path" validate:"omitempty" label:"路由路径"`
-	AuthCode  string          `json:"authCode" validate:"omitempty" label:"权限标识"`
-	Component string          `json:"component" validate:"omitempty" label:"组件路径"`
-	Type      string          `json:"type" validate:"required,oneof=catalog menu button embedded link" label:"菜单类型"`
-	Status    int             `json:"status" validate:"required,oneof=0 1" label:"状态"` // 0-禁用 1-启用
-	Meta      models.MenuMeta `json:"meta" validate:"required" label:"菜单元数据"`
-	Pid       int             `json:"pid" validate:"omitempty" label:"父级菜单ID"`
-}
-
-// GetMenuDTO 获取菜单DTO
-type GetMenuDTO struct {
-	ID int `uri:"id" validate:"required" label:"菜单ID"`
-}
-
-// DeleteMenuDTO 删除菜单DTO
-type DeleteMenuDTO struct {
-	ID int `uri:"id" validate:"required" label:"菜单ID"`
 }

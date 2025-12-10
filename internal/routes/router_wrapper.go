@@ -88,12 +88,10 @@ func (w *RouterWrapper) calculateFullPath(relativePath string) string {
 	if w.BasePath() == "/" && relativePath == "/" {
 		return "/"
 	}
-
 	// 拼接基础路径和相对路径，去除重复的斜杠
 	fullPath := strings.TrimSuffix(w.BasePath(), "/") + "/" + strings.TrimPrefix(relativePath, "/")
-
-	// 统一输出小写
-	return strings.ToLower(fullPath)
+	// 统一输出小写,去除结尾斜杠
+	return strings.ToLower(strings.TrimSuffix(fullPath, "/"))
 }
 
 // SyncPermissions 将收集的路由信息同步到数据库作为权限点

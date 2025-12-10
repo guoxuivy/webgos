@@ -21,6 +21,6 @@ jwt:
 # 自动迁移配置 (默认为false)
 auto_migrate: false
 # 自动同步RBAC权限点 (默认为false)
-auto_rbac_point: false
+auto_rbac_point: true
 # 超级管理员账号
 super_account: "super"
