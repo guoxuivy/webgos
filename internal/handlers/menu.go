@@ -19,7 +19,7 @@ import (
 // @Param data body dto.MenuDTO true "菜单参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/menu/add [post]
+// @Router /api/menu [post]
 // AddMenu 创建菜单
 // @Security BearerAuth
 func AddMenu(c *gin.Context) {
@@ -78,7 +78,7 @@ func AddMenu(c *gin.Context) {
 // @Param data body dto.MenuDTO true "菜单参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/menu/edit [post]
+// @Router /api/menu/:id [put]
 // EditMenu 编辑菜单
 // @Security BearerAuth
 func EditMenu(c *gin.Context) {
@@ -131,7 +131,7 @@ func EditMenu(c *gin.Context) {
 // @Param id path int true "菜单ID"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/menu/delete/:id [post]
+// @Router /api/menu/:id [delete]
 // DeleteMenu 删除菜单
 // @Security BearerAuth
 func DeleteMenu(c *gin.Context) {
@@ -155,7 +155,7 @@ func DeleteMenu(c *gin.Context) {
 // @Param id path int true "菜单ID"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/menu/info/:id [get]
+// @Router /api/menu/:id [get]
 // GetMenuByID 获取菜单详情
 // @Security BearerAuth
 func GetMenuByID(c *gin.Context) {
