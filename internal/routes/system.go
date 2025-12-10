@@ -28,9 +28,9 @@ func init() {
 		menu := WrapRouter(api.Group("/menu"))
 		{
 			menu.POST("", "创建菜单", handlers.AddMenu)
+			menu.GET("/:id", "菜单详情", handlers.GetMenu)
 			menu.PUT("/:id", "编辑菜单", handlers.EditMenu)
 			menu.DELETE("/:id", "删除菜单", handlers.DeleteMenu)
-			menu.GET("/:id", "获取菜单详情", handlers.GetMenuByID)
 
 			// menu.POST("/add", "创建菜单", handlers.AddMenu)
 			// menu.POST("/edit", "编辑菜单", handlers.EditMenu)

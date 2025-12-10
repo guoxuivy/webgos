@@ -132,7 +132,6 @@ func EditMenu(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/menu/:id [delete]
-// DeleteMenu 删除菜单
 // @Security BearerAuth
 func DeleteMenu(c *gin.Context) {
 	ID := utils.S2Int(c.Param("id"))
@@ -143,11 +142,10 @@ func DeleteMenu(c *gin.Context) {
 		response.Error(c, "删除菜单失败: "+err.Error())
 		return
 	}
-
 	response.Success(c, "删除菜单成功", nil)
 }
 
-// @Summary 获取菜单详情
+// @Summary 菜单详情
 // @Description 获取菜单详情
 // @Tags 菜单管理
 // @Accept json
@@ -156,9 +154,9 @@ func DeleteMenu(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/menu/:id [get]
-// GetMenuByID 获取菜单详情
+// GetMenu 菜单详情
 // @Security BearerAuth
-func GetMenuByID(c *gin.Context) {
+func GetMenu(c *gin.Context) {
 	ID := utils.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
@@ -168,7 +166,6 @@ func GetMenuByID(c *gin.Context) {
 		response.Error(c, "获取菜单失败: "+err.Error())
 		return
 	}
-
 	response.Success(c, "获取菜单成功", menu)
 }
 
@@ -192,7 +189,6 @@ func GetMenus(c *gin.Context) {
 		response.Error(c, "获取菜单列表失败: "+err.Error())
 		return
 	}
-
 	response.Success(c, "获取菜单列表成功", menus)
 }
 
