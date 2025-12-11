@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"path"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -71,34 +72,35 @@ func (w *RouterWrapper) addRouteInfoWithHandlers(relativePath, method, descripti
 	// 添加路由信息到routeInfos（只记录路径和方法，不记录中间件）
 	// 仅在配置中启用自动同步RBAC权限点时才收集路由信息
 	if config.GlobalConfig.AutoRBACPoint {
-		fullPath := w.calculateFullPath(relativePath)
+		fullPath := strings.ToLower(w.calculateFullPath(relativePath))
 		routeInfos = append(routeInfos, RouteInfo{
 			Path:        fullPath,
 			Method:      method,
 			Description: description,
-			Name:        fullPath + ":" + method,
+			Name:        fullPath + "#" + method,
 		})
 	}
 
 }
+func lastChar(str string) uint8 {
+	if str == "" {
+		panic("The length of the string can't be 0")
+	}
+	return str[len(str)-1]
+}
 
 // 计算完整的路由路径
 func (w *RouterWrapper) calculateFullPath(relativePath string) string {
-	fullPath := "/"
-	// 处理根路径的特殊情况
-	if w.BasePath() == "/" && relativePath == "/" {
-		return fullPath
+	absolutePath := w.BasePath()
+	if relativePath == "" {
+		return absolutePath
 	}
 
-	// 去除基础路径和相对路径末尾的多余斜杠
-	basePath := strings.TrimSuffix(w.BasePath(), "/")
-	if relativePath == "" {
-		fullPath = basePath
-	} else {
-		fullPath = basePath + "/" + strings.TrimPrefix(relativePath, "/")
+	finalPath := path.Join(absolutePath, relativePath)
+	if lastChar(relativePath) == '/' && lastChar(finalPath) != '/' {
+		return finalPath + "/"
 	}
-	// 统一输出小写
-	return strings.ToLower(fullPath)
+	return finalPath
 }
 
 // SyncPermissions 将收集的路由信息同步到数据库作为权限点
