@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 	"webgos/internal/database"
 
@@ -152,6 +153,14 @@ type IActiveRecord[T any] interface {
 	// 参数 item: 包含更新数据的记录对象
 	// 返回值: 更新过程中可能发生的错误
 	Update(item *T) error
+
+	// UpdateColumns 更新指定字段
+	// 使用gorm的UpdateColumns方法更新指定字段
+	// 参数 columns: 要更新的字段及其新值的映射
+	// 返回值: 更新过程中可能发生的错误
+	// 如果存在 WHERE 条件，则使用该条件更新记录
+	// 否则，使用模型主键ID作为WHERE条件
+	UpdateColumns(columns map[string]any) error
 
 	// Delete 根据ID删除一条记录（软删除）
 	// 参数 id: 要删除记录的ID
@@ -642,6 +651,32 @@ func (c *BaseModel[T]) Read(id int) (*T, error) {
 // 返回值: 更新过程中可能发生的错误
 func (c *BaseModel[T]) Update(item *T) error {
 	return c.getQuery().Updates(item).Error
+}
+
+// UpdateColumns 更新指定字段
+// 如果存在 WHERE 条件，则使用该条件更新记录
+// 否则，使用模型主键ID作为WHERE条件
+func (c *BaseModel[T]) UpdateColumns(columns map[string]any) error {
+	if c.hasWhere() {
+		return c.getQuery().Model((*T)(nil)).UpdateColumns(columns).Error
+	} else {
+		if c.ID == 0 {
+			return errors.New("no id found")
+		}
+		return c.getQuery().Model((*T)(nil)).Where("id = ?", c.ID).UpdateColumns(columns).Error
+	}
+}
+func (c *BaseModel[T]) hasWhere() bool {
+	stmt := c.getQuery().Statement
+	// 检查Statement是否为空
+	if stmt == nil {
+		return false
+	}
+	// 检查WHERE子句是否存在且有表达式
+	if whereClause, ok := stmt.Clauses["WHERE"]; ok {
+		return whereClause.Expression != nil
+	}
+	return false
 }
 
 // Delete 软删除：基于模型的主键，标记DeletedAt字段
