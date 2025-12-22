@@ -27,7 +27,7 @@ var levelColor = map[string]string{
 	"SQL":   ColorBlue,
 }
 
-type msg struct {
+type logMsg struct {
 	level   string
 	message string
 }
@@ -37,7 +37,7 @@ type log struct {
 	logFiles  map[string]*os.File // 按日志级别存储日志文件句柄
 	mu        sync.Mutex          // 添加互斥锁 以确保并发安全
 	isDebug   bool                // 新增字段，用于判断是否处于调试模式
-	buffer    chan *msg           // 日志缓冲通道，用于传递结构化的日志消息
+	buffer    chan *logMsg        // 日志缓冲通道，用于传递结构化的日志消息
 	closeChan chan struct{}       // 关闭信号通道
 	doneChan  chan struct{}       // 通知Close() flushLoop已完成
 	logDir    string              // 存储日志目录路径
@@ -54,7 +54,7 @@ func InitLogger(logDir string, isDebug bool) error {
 	Xlogger = &log{
 		logFiles:  make(map[string]*os.File),
 		isDebug:   isDebug,
-		buffer:    make(chan *msg, 200),
+		buffer:    make(chan *logMsg, 200),
 		closeChan: make(chan struct{}),
 		doneChan:  make(chan struct{}),
 		logDir:    logDir,
@@ -106,7 +106,7 @@ func (l *log) enqueue(level, format string, v ...any) {
 		fileName := filepath.Base(file)
 		message = fmt.Sprintf("%s %s:%d - %s", now, fileName, line, message)
 	}
-	msg := &msg{
+	msg := &logMsg{
 		level:   level,
 		message: message,
 	}
@@ -126,7 +126,7 @@ func (l *log) enqueue(level, format string, v ...any) {
 	case l.buffer <- msg:
 	default:
 		// 缓冲区满时直接写入（防止阻塞）
-		go l.writeToFile(msg.level, msg.message)
+		go l.flushBuffer([]*logMsg{msg})
 	}
 
 }
@@ -171,7 +171,7 @@ func (l *log) flushLoop() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	var buffer []*msg
+	var buffer []*logMsg
 	for {
 		select {
 		case msg := <-l.buffer:
@@ -196,7 +196,7 @@ func (l *log) flushLoop() {
 }
 
 // flushBuffer 实际执行日志写入
-func (l *log) flushBuffer(buffer []*msg) {
+func (l *log) flushBuffer(buffer []*logMsg) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	for _, msg := range buffer {
