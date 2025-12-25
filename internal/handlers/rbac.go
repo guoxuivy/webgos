@@ -77,34 +77,27 @@ func EditRole(c *gin.Context) {
 		return
 	}
 
-	role.SetMenuIDs(dtoModel.Menus)
-	role.Name = dtoModel.Name
-	role.Remark = dtoModel.Remark
-	role.Status = dtoModel.Status
+	// xlog.Debug("%#v", dtoModel)
+
+	if dtoModel.Menus != nil {
+		role.SetMenuIDs(dtoModel.Menus)
+	}
+	// 只更新提供了值的字段
+	if dtoModel.Name != nil {
+		role.Name = *dtoModel.Name
+	}
+	if dtoModel.Remark != nil {
+		role.Remark = *dtoModel.Remark
+	}
+	if dtoModel.Status != nil {
+		role.Status = *dtoModel.Status
+	}
 
 	err = role.Select("*").Update(role)
 	if err != nil {
 		response.Error(c, "更新角色失败: "+err.Error())
 		return
 	}
-
-	// // 创建角色服务
-	// rbacService := services.NewRBACService()
-	// role, err := rbacService.GetRoleByID(dtoModel.ID)
-	// if err != nil {
-	// 	response.Error(c, "角色不存在: "+err.Error())
-	// 	return
-	// }
-
-	// // 更新角色信息
-	// role.Name = dtoModel.Name
-	// role.Remark = dtoModel.Remark
-	// role.Status = dtoModel.Status
-	// err = database.DB.Save(role).Error
-	// if err != nil {
-	// 	response.Error(c, "编辑角色失败: "+err.Error())
-	// 	return
-	// }
 	response.Success(c, "编辑角色成功", nil)
 }
 
