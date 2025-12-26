@@ -199,35 +199,13 @@ type IActiveRecord[T any] interface {
 	// 使用gorm的Pluck方法查询指定字段的值
 	//
 	// 示例:
-	//    // 查询所有用户的名称
-	//    names, err := userModel.Pluck("name")
-	//    if err != nil {
-	//        log.Error("Failed to pluck names:", err)
-	//        return
-	//    }
-	//
-	//    for _, name := range names {
-	//        fmt.Println(name)
-	//    }
-	//
-	//    // 查询满足条件的用户ID
-	//    ids, err := userModel.Where("active = ?", true).Pluck("id")
-	//    if err != nil {
-	//        log.Error("Failed to pluck IDs:", err)
-	//        return
-	//    }
-	//
-	//    for _, id := range ids {
-	//        fmt.Println(id)
-	//    }
-	//
-	// 注意事项:
-	//   - 只查询指定字段的值，减少数据传输和内存占用
-	//   - 返回的是 interface{} 类型的切片，需要类型断言才能使用
+	// var names []string
+	// err := model.Pluck("name", &names)
 	//
 	// 参数 column: 要查询的字段名
+	// 参数 dest: 接收查询结果的目标变量指针
 	// 返回值: 字段值列表和可能发生的错误
-	Pluck(column string) ([]interface{}, error)
+	Pluck(column string, dest any) error
 
 	// One 查询单条记录
 	// 使用gorm的Take方法查询第一条匹配的记录
@@ -744,39 +722,13 @@ func (c *BaseModel[T]) More() ([]T, error) {
 // 使用gorm的Pluck方法查询指定字段的值
 //
 // 示例:
-//
-//	// 查询所有用户的名称
-//	names, err := userModel.Pluck("name")
-//	if err != nil {
-//	    log.Error("Failed to pluck names:", err)
-//	    return
-//	}
-//
-//	for _, name := range names {
-//	    fmt.Println(name)
-//	}
-//
-//	// 查询满足条件的用户ID
-//	ids, err := userModel.Where("active = ?", true).Pluck("id")
-//	if err != nil {
-//	    log.Error("Failed to pluck IDs:", err)
-//	    return
-//	}
-//
-//	for _, id := range ids {
-//	    fmt.Println(id)
-//	}
-//
-// 注意事项:
-//   - 只查询指定字段的值，减少数据传输和内存占用
-//   - 返回的是 interface{} 类型的切片，需要类型断言才能使用
+// var names []string
+// err := model.Pluck("name", &names)
 //
 // 参数 column: 要查询的字段名
 // 返回值: 字段值列表和可能发生的错误
-func (c *BaseModel[T]) Pluck(column string) ([]interface{}, error) {
-	var values []interface{}
-	err := c.getQuery().Pluck(column, &values).Error
-	return values, err
+func (c *BaseModel[T]) Pluck(column string, dest any) error {
+	return c.getQuery().Pluck(column, dest).Error
 }
 
 // One 查询单条记录
