@@ -1,10 +1,11 @@
+README.md
 # webgos 项目文档
 
 ## 项目概述
 webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 Gin 和 GORM，面向可扩展的业务开发。项目目标是提供一套工程化、可测试、可扩展的模板，包含常见的鉴权、日志、请求追踪、事务、分页、统一响应等能力，帮助团队快速落地业务。
 
 ## 项目特点
-- **技术先进**：使用 Go 语言开发，基于 Gin 框架和 GORM ORM 工具
+- **技术先进**：使用 Go 1.25 语言开发，基于 Gin 框架和 GORM ORM 工具
 - **架构清晰**：采用 MVC 架构模式，分层设计清晰
 - **配置灵活**：支持 YAML 格式的配置文件
 - **易于扩展**：分层设计，便于新增功能集成
@@ -13,15 +14,20 @@ webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 
 - **文档完善**：集成 Swagger API 文档，便于接口调试和使用
 - **日志系统**：完善的自定义日志记录系统，支持请求追踪和问题排查
 - **优雅关闭**：支持服务的优雅启动和关闭
+- **事务支持**：提供便捷的事务处理能力，支持事务嵌套
+- **泛型模型**：基于泛型的 BaseModel，提供通用的 CRUD 操作
 
 ## 技术栈
-- **编程语言**：Go 1.24.x
+- **编程语言**：Go 1.25
 - **Web 框架**：Gin
 - **ORM 框架**：GORM
-- **数据库**：MySQL（通过 GORM driver）
+- **数据库**：MySQL（通过 gorm.io/driver/mysql）
+- **缓存**：github.com/patrickmn/go-cache
 - **配置管理**：YAML（gopkg.in/yaml.v3）
-- **数据验证**：go-playground/validator
-- **API 文档**：Swagger（swaggo）
+- **数据验证**：github.com/go-playground/validator/v10
+- **API 文档**：Swaggo（swag + gin-swagger）
+- **JWT 认证**：github.com/golang-jwt/jwt/v4
+- **UUID 生成**：github.com/google/uuid
 - **测试框架**：testify
 
 ## 目录结构
@@ -42,10 +48,13 @@ webgos/
 │   │   └── db.go                   # 数据库连接和迁移逻辑
 │   ├── dto/                        # 数据传输对象
 │   │   ├── inventory.go            # 库存相关DTO
+│   │   ├── menu.go                 # 菜单相关DTO
 │   │   ├── rbac.go                 # RBAC相关DTO
 │   │   └── user.go                 # 用户相关DTO
 │   ├── handlers/                   # HTTP请求处理器
+│   │   ├── auth.go                 # 认证相关请求处理
 │   │   ├── inventory.go            # 库存相关请求处理
+│   │   ├── menu.go                 # 菜单相关请求处理
 │   │   ├── product.go              # 产品相关请求处理
 │   │   ├── rbac.go                 # RBAC相关请求处理
 │   │   ├── test.go                 # 测试相关请求处理
@@ -62,6 +71,7 @@ webgos/
 │   ├── models/                     # 数据访问层
 │   │   ├── base_model.go           # 基础模型
 │   │   ├── inventory_record.go     # 库存记录数据模型
+│   │   ├── menu.go                 # 菜单数据模型
 │   │   ├── product.go              # 产品数据模型
 │   │   ├── rbac.go                 # RBAC权限数据模型
 │   │   └── user.go                 # 用户数据模型
@@ -70,6 +80,7 @@ webgos/
 │   │   └── routes.go               # 路由注册和管理
 │   ├── services/                   # 业务逻辑层
 │   │   ├── inventory.go            # 库存业务逻辑
+│   │   ├── menu.go                 # 菜单业务逻辑
 │   │   ├── product.go              # 产品业务逻辑
 │   │   ├── rbac.go                 # RBAC业务逻辑
 │   │   └── user.go                 # 用户业务逻辑
@@ -241,11 +252,13 @@ RequestID -> Recovery -> Logging -> CORS -> JWT -> Auth -> 业务处理 -> Auth 
 - `Create(item *T) error`
 - `Read(id int) (*T, error)`
 - `Update(item *T) error`（当前实现使用 GORM `Updates`，仅更新非零值字段；如需覆盖全部字段请使用 `Save`）
+- `UpdateColumns(item *T) error`（更新指定字段）
 - `Delete(id int) error`（软删除）
 - `More() ([]T, error)`
 - `One() (*T, error)`（返回底层错误，调用方可对 `gorm.ErrRecordNotFound` 做 404 处理）
 - `Count() (int, error)`
 - `Page(page, pageSize int) ([]T, int, error)`（本项目建议 Page 返回 error，以便上层处理 DB 错误）
+- `Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) error`（事务支持）
 
 链式查询示例：
 
@@ -266,7 +279,7 @@ err := database.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 ## 开发与部署
 
 ### 开发环境要求
-- Go 1.24.4 或更高版本
+- Go 1.25 或更高版本
 - MySQL 5.7 或更高版本
 - Git 版本管理工具
 
@@ -385,8 +398,7 @@ swag init -g cmd/main.go
 5. **请求追踪**：与RequestID中间件配合，实现请求全链路追踪
 
 ## 许可证
-
-
+本项目采用随便玩许可证，详情见 [LICENSE](LICENSE) 文件。
 
 ## 开发命令
 ```bash
@@ -394,5 +406,4 @@ swag init -g cmd/main.go
 # 访问: http://localhost:8080/swagger/index.html
 
 go run cmd/main.go -c ./config/config.yaml
-
 ```
