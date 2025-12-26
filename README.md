@@ -336,11 +336,6 @@ go tool cover -html=coverage.out
 
 集成测试会访问数据库，请务必使用独立的测试数据库并在测试完成后清理测试数据。
 
-## Swagger API 文档
-
-本项目已集成 Swagger，启动服务后可访问：
-
-- [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
 
 ## 常用命令
 ```bash
@@ -376,7 +371,11 @@ swag init -g cmd/main.go
 
 # 生成后启动服务并访问 Swagger UI：
 # 访问: http://localhost:8080/swagger/index.html
+
 ```
+
+## 日志
+
 - **ACCESS**：访问日志，记录请求处理信息
 - **INFO**：常规信息日志
 - **ERROR**：错误日志
