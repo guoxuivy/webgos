@@ -25,7 +25,7 @@ type AssignRolesDTO struct {
 // AssignPermissionsDTO 分配权限给角色DTO
 type AssignPermissionsDTO struct {
 	RoleID        int   `json:"role_id" validate:"required" label:"角色ID"`
-	PermissionIDs []int `json:"permission_ids" validate:"required,min=1" label:"权限ID列表"`
+	PermissionIDs []int `json:"permission_ids" validate:"required" label:"权限ID列表"`
 }
 
 // AssignMenusDTO 分配菜单给角色DTO

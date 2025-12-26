@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 
-	"webgos/internal/database"
 	"webgos/internal/dto"
 	"webgos/internal/models"
 )
@@ -33,26 +32,21 @@ func (s *userService) CreateOrUpdateUser(user *models.User) error {
 	}
 
 	if user.ID > 0 {
-		// 更新用户
-		if err := user.Update(user); err != nil {
-			return err
-		}
-		return nil
+		// 更新用户（使用 BaseModel）
+		return user.Update(user)
 	}
 
-	// 创建用户
-	if err := user.Create(user); err != nil {
-		return err
-	}
-	return nil
+	// 创建用户（使用 BaseModel）
+	return user.Create(user)
 }
 
 // ResetPassword 重置用户密码
 func (s *userService) ResetPassword(username, password string) error {
-	var user models.User
+	var userModel models.User
 
-	// 根据用户名查找用户
-	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+	// 根据用户名查找用户（使用 BaseModel）
+	user, err := userModel.Where("username = ?", username).One()
+	if err != nil {
 		return errors.New("用户不存在")
 	}
 
@@ -61,14 +55,8 @@ func (s *userService) ResetPassword(username, password string) error {
 		return err
 	}
 
-	// 只更新密码字段，避免更新用户名导致唯一性约束冲突
-	err := database.DB.Model(&user).Select("Password").Updates(&user).Error
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// 只更新密码字段（使用 BaseModel UpdateColumns）
+	return user.UpdateColumns(map[string]any{"Password": user.Password})
 }
 
 // UsersPage 获取用户列表

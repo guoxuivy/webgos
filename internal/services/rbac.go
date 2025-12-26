@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 
-	"webgos/internal/database"
 	"webgos/internal/models"
 
 	"gorm.io/gorm"
@@ -29,17 +28,20 @@ func NewRBACService() RBACService {
 	return &rbacService{}
 }
 
-// AssignRolesToUser 分配角色给用户
+// AssignRolesToUser 分配角色给用户（使用 BaseModel）
 func (s *rbacService) AssignRolesToUser(userID int, roleIDs []int) error {
-	// 检查用户是否存在
-	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
+	var userModel models.User
+
+	// 检查用户是否存在（使用 BaseModel）
+	user, err := userModel.Read(userID)
+	if err != nil {
 		return errors.New("用户不存在")
 	}
 
-	// 检查角色是否存在
-	var roles []models.RBACRole
-	if err := database.DB.Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+	// 检查角色是否存在（使用 BaseModel）
+	var roleModel models.RBACRole
+	roles, err := roleModel.Where("id IN ?", roleIDs).More()
+	if err != nil {
 		return errors.New("查询角色时出错")
 	}
 
@@ -47,25 +49,38 @@ func (s *rbacService) AssignRolesToUser(userID int, roleIDs []int) error {
 		return errors.New("部分角色不存在")
 	}
 
-	// 分配角色给用户
-	if err := database.DB.Model(&user).Association("Roles").Replace(&roles); err != nil {
-		return err
-	}
+	// 使用事务更新用户角色关联
+	return userModel.Transaction(func(tx *gorm.DB) error {
+		// 清空用户的现有角色
+		if err := tx.Model(user).Association("Roles").Clear(); err != nil {
+			return err
+		}
 
-	return nil
+		// 添加新的角色
+		if len(roles) > 0 {
+			if err := tx.Model(user).Association("Roles").Append(roles); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
-// AssignPermissionsToRole 分配权限给角色
+// AssignPermissionsToRole 分配权限给角色（使用 BaseModel）
 func (s *rbacService) AssignPermissionsToRole(roleID int, permissionIDs []int) error {
-	// 检查角色是否存在
-	var role models.RBACRole
-	if err := database.DB.First(&role, roleID).Error; err != nil {
+	var roleModel models.RBACRole
+
+	// 检查角色是否存在（使用 BaseModel）
+	role, err := roleModel.Read(roleID)
+	if err != nil {
 		return errors.New("角色不存在")
 	}
 
-	// 检查权限是否存在
-	var permissions []models.RBACPermission
-	if err := database.DB.Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+	// 检查权限是否存在（使用 BaseModel）
+	var permissionModel models.RBACPermission
+	permissions, err := permissionModel.Where("id IN ?", permissionIDs).More()
+	if err != nil {
 		return errors.New("查询权限时出错")
 	}
 
@@ -73,31 +88,43 @@ func (s *rbacService) AssignPermissionsToRole(roleID int, permissionIDs []int) e
 		return errors.New("部分权限不存在")
 	}
 
-	// 分配权限给角色
-	if err := database.DB.Model(&role).Association("Permissions").Replace(&permissions); err != nil {
-		return err
-	}
+	// 使用事务更新角色权限关联
+	return roleModel.Transaction(func(tx *gorm.DB) error {
+		// 清空角色的现有权限
+		if err := tx.Model(role).Association("Permissions").Clear(); err != nil {
+			return err
+		}
 
-	return nil
+		// 添加新的权限
+		if len(permissions) > 0 {
+			if err := tx.Model(role).Association("Permissions").Append(permissions); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
-// GetRoleByID 根据ID获取角色
+// GetRoleByID 根据ID获取角色（使用 BaseModel）
 func (s *rbacService) GetRoleByID(id int) (*models.RBACRole, error) {
-	var role models.RBACRole
-	if err := database.DB.First(&role, id).Error; err != nil {
+	var roleModel models.RBACRole
+	role, err := roleModel.Read(id)
+	if err != nil {
 		return nil, err
 	}
 
 	// 获取角色的菜单ID列表
 	role.Menus = role.GetMenuIDs()
 
-	return &role, nil
+	return role, nil
 }
 
-// GetUserRoles 获取用户的角色
+// GetUserRoles 获取用户的角色（使用 BaseModel）
 func (s *rbacService) GetUserRoles(userID int) ([]models.RBACRole, error) {
-	var user models.User
-	if err := database.DB.Preload("Roles").First(&user, userID).Error; err != nil {
+	var userModel models.User
+	user, err := userModel.Preload("Roles").Read(userID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -109,11 +136,10 @@ func (s *rbacService) GetUserRoles(userID int) ([]models.RBACRole, error) {
 	return user.Roles, nil
 }
 
-// GetRoles 获取所有角色列表
+// GetRoles 获取所有角色列表（使用 BaseModel）
 func (s *rbacService) GetRoles() ([]models.RBACRole, error) {
-
-	model := models.RBACRole{}
-	roles, err := model.Preload("Permissions").More()
+	var roleModel models.RBACRole
+	roles, err := roleModel.Preload("Permissions").More()
 	if err != nil {
 		return nil, err
 	}
@@ -134,40 +160,39 @@ func (s *rbacService) GetRoles() ([]models.RBACRole, error) {
 	return roles, nil
 }
 
-// GetPermissions 获取所有权限项列表
+// GetPermissions 获取所有权限项列表（使用 BaseModel）
 func (s *rbacService) GetPermissions() ([]models.RBACPermission, error) {
-	var permissions []models.RBACPermission
-	if err := database.DB.Find(&permissions).Error; err != nil {
-		return nil, err
-	}
-	return permissions, nil
+	var permissionModel models.RBACPermission
+	return permissionModel.More()
 }
 
-// GetRolePermissions 获取角色的所有权限
+// GetRolePermissions 获取角色的所有权限（使用 BaseModel）
 func (s *rbacService) GetRolePermissions(roleID int) ([]models.RBACPermission, error) {
-	var role models.RBACRole
-	if err := database.DB.Preload("Permissions").First(&role, roleID).Error; err != nil {
+	var roleModel models.RBACRole
+	role, err := roleModel.Preload("Permissions").Read(roleID)
+	if err != nil {
 		return nil, err
 	}
 	return role.Permissions, nil
 }
 
-// DeletePermission 删除权限点
+// DeletePermission 删除权限点（使用 BaseModel）
 func (s *rbacService) DeletePermission(id int) error {
-	permission := &models.RBACPermission{}
-	permission.ID = id
+	var permissionModel models.RBACPermission
 
-	return database.DB.Transaction(func(tx *gorm.DB) error {
+	// 检查权限是否存在
+	permission, err := permissionModel.Read(id)
+	if err != nil {
+		return errors.New("权限不存在")
+	}
+
+	return permissionModel.Transaction(func(tx *gorm.DB) error {
 		// 删除角色权限关联数据
 		if err := tx.Where("rbac_permission_id = ?", id).Delete(&models.RBACRolePermission{}).Error; err != nil {
 			return err
 		}
 
-		// 删除权限数据
-		if err := tx.Delete(permission).Error; err != nil {
-			return err
-		}
-
-		return nil
+		// 删除权限数据（使用 BaseModel）
+		return permission.WithTx(tx).Delete(id)
 	})
 }

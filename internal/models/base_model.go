@@ -152,6 +152,7 @@ type IActiveRecord[T any] interface {
 	// Update 更新一条记录
 	// 参数 item: 包含更新数据的记录对象
 	// 返回值: 更新过程中可能发生的错误
+	// 只会更新非零值字段，如果要更新全部字段，请使加上Select("*")
 	Update(item *T) error
 
 	// UpdateColumns 更新指定字段

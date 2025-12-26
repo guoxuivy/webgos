@@ -8,7 +8,6 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"webgos/internal/config"
-	"webgos/internal/database"
 	"webgos/internal/models"
 )
 
@@ -32,12 +31,13 @@ func NewAuthService() AuthService {
 
 // Login 用户登录并生成JWT令牌
 func (s *authService) Login(username, password string) (string, error) {
-	var user models.User
+	var userModel models.User
 
 	jwtConfig := config.GlobalConfig.JWT
 
-	// 根据用户名查找用户
-	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+	// 根据用户名查找用户（使用 BaseModel）
+	user, err := userModel.Where("username = ?", username).One()
+	if err != nil {
 		return "", errors.New("用户不存在")
 	}
 

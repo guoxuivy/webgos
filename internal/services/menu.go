@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"webgos/internal/config"
-	"webgos/internal/database"
 	"webgos/internal/models"
 )
 
@@ -29,76 +28,64 @@ func NewMenuService() MenuService {
 	return &menuService{}
 }
 
-// CreateMenu 创建菜单
+// CreateMenu 创建菜单（使用 BaseModel）
 func (s *menuService) CreateMenu(menu *models.Menu) error {
-	if err := menu.Create(menu); err != nil {
-		return err
-	}
-	return nil
+	var menuModel models.Menu
+	return menuModel.Create(menu)
 }
 
-// UpdateMenu 更新菜单
+// UpdateMenu 更新菜单（使用 BaseModel）
 func (s *menuService) UpdateMenu(id int, menu *models.Menu) error {
-	existingMenu, err := menu.Read(id)
+	var menuModel models.Menu
+	existingMenu, err := menuModel.Read(id)
 	if err != nil {
 		return errors.New("菜单不存在")
 	}
 
 	// 更新菜单信息
-	//  Select("*") 来选择所有字段进行更新
 	menu.ID = id
-	if err := existingMenu.Select("*").Update(menu); err != nil {
-		return err
-	}
-	return nil
+	return existingMenu.Select("*").Update(menu)
 }
 
-// DeleteMenu 删除菜单
+// DeleteMenu 删除菜单（使用 BaseModel）
 func (s *menuService) DeleteMenu(id int) error {
-	menu := &models.Menu{}
-	existingMenu, err := menu.Read(id)
+	var menuModel models.Menu
+
+	// 检查菜单是否存在
+	existingMenu, err := menuModel.Read(id)
 	if err != nil {
 		return errors.New("菜单不存在")
 	}
 
 	// 检查是否有子菜单
-	var childCount int64
-	database.DB.Model(&models.Menu{}).Where("parent_id = ?", id).Count(&childCount)
+	childCount, err := menuModel.Where("parent_id = ?", id).Count()
+	if err != nil {
+		return err
+	}
 	if childCount > 0 {
 		return errors.New("存在子菜单，无法删除")
 	}
 
-	// 删除菜单
-	if err := existingMenu.Delete(id); err != nil {
-		return err
-	}
-	return nil
+	// 删除菜单（使用 BaseModel）
+	return existingMenu.Delete(id)
 }
 
-// GetMenuByID 根据ID获取菜单
+// GetMenuByID 根据ID获取菜单（使用 BaseModel）
 func (s *menuService) GetMenuByID(id int) (*models.Menu, error) {
-	menu := &models.Menu{}
-	existingMenu, err := menu.Read(id)
-	if err != nil {
-		return nil, err
-	}
-	return existingMenu, nil
+	var menuModel models.Menu
+	return menuModel.Read(id)
 }
 
-// GetAllMenus 获取所有菜单
+// GetAllMenus 获取所有菜单（使用 BaseModel）
 func (s *menuService) GetAllMenus() ([]models.Menu, error) {
-	menu := &models.Menu{}
-	menus, err := menu.More()
-	if err != nil {
-		return nil, err
-	}
-	return menus, nil
+	var menuModel models.Menu
+	return menuModel.More()
 }
 
-// GetMenuTree 获取菜单树
+// GetMenuTree 获取菜单树（使用 BaseModel）
 func (s *menuService) GetMenuTree() ([]models.Menu, error) {
-	menu := &models.Menu{}
-	menus, err := menu.More()
+	var menuModel models.Menu
+	menus, err := menuModel.More()
 	if err != nil {
 		return nil, err
 	}
@@ -108,13 +95,13 @@ func (s *menuService) GetMenuTree() ([]models.Menu, error) {
 	return menuTree, nil
 }
 
-// IsNameExists 检查菜单名称是否存在
+// IsNameExists 检查菜单名称是否存在（使用 BaseModel）
 func (s *menuService) IsNameExists(name string, id ...int) (bool, error) {
-	menu := &models.Menu{}
+	var menuModel models.Menu
 
 	// 如果提供了ID参数，则排除该ID进行检查
 	if len(id) > 0 {
-		count, err := menu.Where("name = ? AND id != ?", name, id[0]).Count()
+		count, err := menuModel.Where("name = ? AND id != ?", name, id[0]).Count()
 		if err != nil {
 			return false, err
 		}
@@ -122,20 +109,20 @@ func (s *menuService) IsNameExists(name string, id ...int) (bool, error) {
 	}
 
 	// 默认检查逻辑
-	count, err := menu.Where("name = ?", name).Count()
+	count, err := menuModel.Where("name = ?", name).Count()
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-// IsPathExists 检查菜单路径是否存在
+// IsPathExists 检查菜单路径是否存在（使用 BaseModel）
 func (s *menuService) IsPathExists(path string, id ...int) (bool, error) {
-	menu := &models.Menu{}
+	var menuModel models.Menu
 
 	// 如果提供了ID参数，则排除该ID进行检查
 	if len(id) > 0 {
-		count, err := menu.Where("path = ? AND id != ?", path, id[0]).Count()
+		count, err := menuModel.Where("path = ? AND id != ?", path, id[0]).Count()
 		if err != nil {
 			return false, err
 		}
@@ -143,25 +130,29 @@ func (s *menuService) IsPathExists(path string, id ...int) (bool, error) {
 	}
 
 	// 默认检查逻辑
-	count, err := menu.Where("path = ?", path).Count()
+	count, err := menuModel.Where("path = ?", path).Count()
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-// GetUserMenus 获取用户菜单
+// GetUserMenus 获取用户菜单（使用 BaseModel）
 func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
-	// 获取用户及其角色信息
-	var user models.User
-	if err := database.DB.Preload("Roles").First(&user, userID).Error; err != nil {
+	var userModel models.User
+
+	// 获取用户及其角色信息（使用 BaseModel）
+	user, err := userModel.Preload("Roles").Read(userID)
+	if err != nil {
 		return nil, err
 	}
+
 	isSuper := false
 	// 检查是否为超管
 	if user.Username == config.GlobalConfig.SuperAccount {
 		isSuper = true
 	}
+
 	// 收集用户所有角色的菜单ID
 	menuIDMap := make(map[int]bool)
 	for _, role := range user.Roles {
@@ -183,16 +174,19 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 		menuIDs = append(menuIDs, menuID)
 	}
 
-	// 根据菜单ID获取菜单列表
-	var menus []models.Menu
-	// button类型的菜单不包含在内，因为它们通常不显示在菜单树中
-	query := database.DB.Where("status = ? AND type != ?", 1, "button")
+	// 根据菜单ID获取菜单列表（使用 BaseModel）
+	var menuModel models.Menu
+	query := menuModel.Where("status = ? AND type != ?", 1, "button")
 	if !isSuper {
+		// 对于IN查询，使用链式调用
 		query = query.Where("id IN ?", menuIDs)
 	}
-	if err := query.Find(&menus).Error; err != nil {
+
+	menus, err := query.More()
+	if err != nil {
 		return nil, err
 	}
+
 	// 构建菜单树
 	menuTree := buildMenuTree(menus, 0)
 	// 为有子菜单的菜单项设置重定向路径

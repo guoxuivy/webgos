@@ -1,7 +1,8 @@
 package services
 
 import (
-	"webgos/internal/database"
+	"strconv"
+
 	"webgos/internal/models"
 )
 
@@ -19,17 +20,25 @@ func NewProductService() ProductService {
 	return &productService{}
 }
 
-// CreateProduct 创建商品
+// CreateProduct 创建商品（使用 BaseModel）
 func (s *productService) CreateProduct(product *models.Product) error {
-	return database.DB.Create(product).Error
+	var productModel models.Product
+	return productModel.Create(product)
 }
 
-// GetProductByID 根据ID获取商品
+// GetProductByID 根据ID获取商品（使用 BaseModel）
 func (s *productService) GetProductByID(id string) (*models.Product, error) {
-	var product models.Product
-	result := database.DB.First(&product, id)
-	if result.Error != nil {
-		return nil, result.Error
+	var productModel models.Product
+	
+	// 转换ID为整数
+	productID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
 	}
-	return &product, nil
+	
+	product, err := productModel.Read(productID)
+	if err != nil {
+		return nil, err
+	}
+	return product, nil
 }
