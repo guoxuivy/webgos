@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 	"webgos/internal/config"
@@ -29,20 +28,29 @@ var permissionCache = cache.New(10*time.Minute, 30*time.Minute)
 func RBAC() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		user_id, exists := c.Get("user_id")
-		if !exists || user_id == "" {
+		userIDInterface, exists := c.Get("user_id")
+		if !exists {
 			response.Error(c, "缺少用户信息", http.StatusUnauthorized)
 			c.Abort()
 			return
 		}
 
+		userID, ok := userIDInterface.(string)
+		if !ok || userID == "" {
+			response.Error(c, "用户信息格式错误", http.StatusUnauthorized)
+			c.Abort()
+			return
+		}
+
 		// 从缓存获取用户权限
-		cacheKey := fmt.Sprintf("permissions:%v", user_id)
+		cacheKey := "permissions:" + userID
 		userPermissions, found := permissionCache.Get(cacheKey)
+		var permissions map[string]bool
+
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User
-			if err := database.DB.Preload("Roles.Permissions").Where("id = ?", user_id).First(&user).Error; err != nil {
+			if err := database.DB.Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
 				response.Error(c, "用户不存在", http.StatusUnauthorized)
 				c.Abort()
 				return
@@ -53,7 +61,7 @@ func RBAC() gin.HandlerFunc {
 				return
 			}
 			// 收集用户所有权限
-			permissions := make(map[string]bool)
+			permissions = make(map[string]bool)
 			for _, role := range user.Roles {
 				for _, perm := range role.Permissions {
 					key := perm.Path + ":" + perm.Method
@@ -63,28 +71,24 @@ func RBAC() gin.HandlerFunc {
 
 			// 将权限存入缓存
 			permissionCache.Set(cacheKey, permissions, cache.DefaultExpiration)
-			userPermissions = permissions
 		} else {
 			// 缓存命中，直接使用缓存的权限
-			permissionsMap, ok := userPermissions.(map[string]bool)
+			permissions, ok = userPermissions.(map[string]bool)
 			if !ok {
-				// 缓存类型错误，重新查询
+				// 缓存类型错误，重新查询或拒绝请求
 				permissionCache.Delete(cacheKey)
-				c.Next()
+				response.Error(c, "权限验证失败", http.StatusForbidden)
+				c.Abort()
 				return
 			}
-			userPermissions = permissionsMap
 		}
-
-		// 类型断言，确保userPermissions是map[string]bool类型
-		permissionsMap, _ := userPermissions.(map[string]bool)
 
 		// 检查当前请求是否有权限
 		currentPath := c.FullPath()
 		currentMethod := c.Request.Method
 		requiredPermission := currentPath + ":" + currentMethod
 
-		if permissionsMap[requiredPermission] {
+		if permissions[requiredPermission] {
 			c.Next()
 		} else {
 			response.Error(c, "没有访问权限", http.StatusForbidden)
