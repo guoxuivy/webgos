@@ -51,19 +51,7 @@ func (s *rbacService) AssignRolesToUser(userID int, roleIDs []int) error {
 
 	// 使用事务更新用户角色关联
 	return userModel.Transaction(func(tx *gorm.DB) error {
-		// 清空用户的现有角色
-		if err := tx.Model(user).Association("Roles").Clear(); err != nil {
-			return err
-		}
-
-		// 添加新的角色
-		if len(roles) > 0 {
-			if err := tx.Model(user).Association("Roles").Append(roles); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return tx.Model(user).Association("Roles").Replace(roles)
 	})
 }
 
@@ -90,19 +78,20 @@ func (s *rbacService) AssignPermissionsToRole(roleID int, permissionIDs []int) e
 
 	// 使用事务更新角色权限关联
 	return roleModel.Transaction(func(tx *gorm.DB) error {
+		return tx.Model(role).Association("Permissions").Replace(permissions)
 		// 清空角色的现有权限
-		if err := tx.Model(role).Association("Permissions").Clear(); err != nil {
-			return err
-		}
+		// if err := tx.Model(role).Association("Permissions").Clear(); err != nil {
+		// 	return err
+		// }
 
-		// 添加新的权限
-		if len(permissions) > 0 {
-			if err := tx.Model(role).Association("Permissions").Append(permissions); err != nil {
-				return err
-			}
-		}
+		// // 添加新的权限
+		// if len(permissions) > 0 {
+		// 	if err := tx.Model(role).Association("Permissions").Append(permissions); err != nil {
+		// 		return err
+		// 	}
+		// }
 
-		return nil
+		// return nil
 	})
 }
 
