@@ -35,8 +35,7 @@ func Debounce(timeout ...time.Duration) gin.HandlerFunc {
 
 		// 检查是否已存在相同请求
 		if _, found := debounceCache.Get(key); found {
-			response.Error(c, "请求过于频繁，请稍后再试", http.StatusTooManyRequests)
-			c.Abort()
+			response.ErrorWithCode(c, "请求过于频繁，请稍后再试", http.StatusTooManyRequests)
 			return
 		}
 		// 将请求ID存入缓存，设置防抖时间窗口

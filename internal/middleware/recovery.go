@@ -28,8 +28,7 @@ func Recovery() gin.HandlerFunc {
 				xlog.Error("%v Recovered from panic: %v", requestID, err)
 				xlog.Error("异常堆栈：%v\n", string(stackInfo))
 
-				response.Error(c, "内部服务器错误", http.StatusInternalServerError)
-				c.Abort()
+				response.ErrorWithCode(c, "内部服务器错误", http.StatusInternalServerError)
 			}
 		}()
 		c.Next()

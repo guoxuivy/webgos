@@ -44,5 +44,5 @@ func SetupRoutes(config *config.Config) *gin.Engine {
 
 // handleNotFound 处理404错误
 func handleNotFound(c *gin.Context) {
-	response.Error(c, "请求的资源不存在", http.StatusNotFound)
+	response.ErrorWithCode(c, "请求的资源不存在", http.StatusNotFound)
 }

@@ -4,7 +4,7 @@ import (
 	"webgos/internal/config"
 	"webgos/internal/dto"
 	"webgos/internal/services"
-	"webgos/internal/utils"
+	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +23,7 @@ import (
 func Login(c *gin.Context) {
 	var userLoginDTO dto.Login
 
-	if err := utils.Validate(c, &userLoginDTO); err != nil {
+	if err := param.Validate(c, &userLoginDTO); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -69,7 +69,7 @@ func ResetPassword(c *gin.Context) {
 	}
 	var userLoginDTO dto.Login
 
-	if err := utils.Validate(c, &userLoginDTO); err != nil {
+	if err := param.Validate(c, &userLoginDTO); err != nil {
 		response.Error(c, err.Error())
 	}
 
@@ -95,7 +95,7 @@ func ResetPassword(c *gin.Context) {
 func RegisterUser(c *gin.Context) {
 	var userRegisterDTO dto.UserRegister
 
-	if err := utils.Validate(c, &userRegisterDTO); err != nil {
+	if err := param.Validate(c, &userRegisterDTO); err != nil {
 		response.Error(c, err.Error())
 		return
 	}

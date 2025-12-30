@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"time"
 	"webgos/internal/config"
 	"webgos/internal/database"
@@ -30,15 +29,13 @@ func RBAC() gin.HandlerFunc {
 
 		userIDInterface, exists := c.Get("user_id")
 		if !exists {
-			response.Error(c, "缺少用户信息", http.StatusUnauthorized)
-			c.Abort()
+			response.AuthError(c, "缺少用户信息")
 			return
 		}
 
 		userID, ok := userIDInterface.(string)
 		if !ok || userID == "" {
-			response.Error(c, "用户信息格式错误", http.StatusUnauthorized)
-			c.Abort()
+			response.AuthError(c, "用户信息格式错误")
 			return
 		}
 
@@ -51,8 +48,7 @@ func RBAC() gin.HandlerFunc {
 			// 缓存未命中，查询数据库
 			var user models.User
 			if err := database.DB.Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
-				response.Error(c, "用户不存在", http.StatusUnauthorized)
-				c.Abort()
+				response.AuthError(c, "用户不存在")
 				return
 			}
 			// 超管跳过权限检查
@@ -77,8 +73,7 @@ func RBAC() gin.HandlerFunc {
 			if !ok {
 				// 缓存类型错误，重新查询或拒绝请求
 				permissionCache.Delete(cacheKey)
-				response.Error(c, "权限验证失败", http.StatusForbidden)
-				c.Abort()
+				response.AuthError(c, "权限验证失败")
 				return
 			}
 		}
@@ -91,8 +86,7 @@ func RBAC() gin.HandlerFunc {
 		if permissions[requiredPermission] {
 			c.Next()
 		} else {
-			response.Error(c, "没有访问权限", http.StatusForbidden)
-			c.Abort()
+			response.Forbidden(c, "没有访问权限")
 			return
 		}
 	}

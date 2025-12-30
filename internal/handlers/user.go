@@ -4,7 +4,7 @@ import (
 	"webgos/internal/dto"
 	"webgos/internal/models"
 	"webgos/internal/services"
-	"webgos/internal/utils"
+	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +40,7 @@ func UserInfo(c *gin.Context) {
 // @Security BearerAuth
 func UsersList(c *gin.Context) {
 	var queryDTO dto.UserQuery
-	if err := utils.Validate(c, &queryDTO); err != nil {
+	if err := param.Validate(c, &queryDTO); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -62,7 +62,7 @@ func UsersList(c *gin.Context) {
 func UserEdit(c *gin.Context) {
 	var userRegisterDTO dto.UserRegister
 
-	if err := utils.Validate(c, &userRegisterDTO); err != nil {
+	if err := param.Validate(c, &userRegisterDTO); err != nil {
 		response.Error(c, err.Error())
 		return
 	}

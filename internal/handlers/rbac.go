@@ -4,7 +4,7 @@ import (
 	"webgos/internal/dto"
 	"webgos/internal/models"
 	"webgos/internal/services"
-	"webgos/internal/utils"
+	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +24,7 @@ import (
 func AddRole(c *gin.Context) {
 	var dtoModel dto.AddRoleDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -65,7 +65,7 @@ func AddRole(c *gin.Context) {
 // @Security BearerAuth
 func EditRole(c *gin.Context) {
 	var dtoModel dto.EditRoleDTO
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -115,7 +115,7 @@ func EditRole(c *gin.Context) {
 func AssignRoles(c *gin.Context) {
 	var dtoModel dto.AssignRolesDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -145,7 +145,7 @@ func AssignRoles(c *gin.Context) {
 func AssignPermissions(c *gin.Context) {
 	var dtoModel dto.AssignPermissionsDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -174,7 +174,7 @@ func AssignPermissions(c *gin.Context) {
 func GetRoleByID(c *gin.Context) {
 	var dtoModel dto.GetRoleDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -203,7 +203,7 @@ func GetRoleByID(c *gin.Context) {
 func GetUserRoles(c *gin.Context) {
 	var dtoModel dto.GetUserRolesDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -272,7 +272,7 @@ func GetPermissions(c *gin.Context) {
 // DeletePermission 删除权限点
 func DeletePermission(c *gin.Context) {
 	var dtoModel dto.DeletePermissionDTO
-	if err := utils.ValidateUri(c, &dtoModel); err != nil {
+	if err := param.ValidateUri(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -299,7 +299,7 @@ func DeletePermission(c *gin.Context) {
 func GetRolePermissions(c *gin.Context) {
 	var dtoModel dto.GetRolePermissionsDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"strings"
 	"webgos/internal/services"
 	"webgos/internal/utils/response"
@@ -14,16 +13,14 @@ func JWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.Error(c, "缺少认证令牌", http.StatusUnauthorized)
-			c.Abort()
+			response.AuthError(c, "缺少认证令牌")
 			return
 		}
 
 		// 检查Bearer token格式
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			response.Error(c, "令牌格式错误", http.StatusUnauthorized)
-			c.Abort()
+			response.AuthError(c, "令牌格式错误")
 			return
 		}
 
@@ -35,8 +32,7 @@ func JWT() gin.HandlerFunc {
 		service := services.NewAuthService()
 		claims, err := service.ValidateToken(tokenString)
 		if err != nil {
-			response.Error(c, err.Error(), http.StatusUnauthorized)
-			c.Abort()
+			response.AuthError(c, err.Error())
 			return
 		}
 

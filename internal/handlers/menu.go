@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"fmt"
+	"webgos/core/stringx"
 	"webgos/internal/dto"
 	"webgos/internal/models"
 	"webgos/internal/services"
-	"webgos/internal/utils"
+	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ import (
 func AddMenu(c *gin.Context) {
 	var dtoModel dto.MenuDTO
 
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -92,7 +93,7 @@ func EditMenu(c *gin.Context) {
 	}
 
 	var dtoModel dto.MenuDTO
-	if err := utils.Validate(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -134,7 +135,8 @@ func EditMenu(c *gin.Context) {
 // @Router /api/menu/:id [delete]
 // @Security BearerAuth
 func DeleteMenu(c *gin.Context) {
-	ID := utils.S2Int(c.Param("id"))
+	ID := stringx.S2Int(c.Param("id"))
+	// ID := utils.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
 	// 删除菜单
@@ -157,7 +159,7 @@ func DeleteMenu(c *gin.Context) {
 // GetMenu 菜单详情
 // @Security BearerAuth
 func GetMenu(c *gin.Context) {
-	ID := utils.S2Int(c.Param("id"))
+	ID := stringx.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
 	// 获取菜单
