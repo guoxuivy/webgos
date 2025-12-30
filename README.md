@@ -35,6 +35,12 @@ webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 
 webgos/
 ├── cmd/                            # 可执行文件相关代码
 │   └── main.go                     # 程序入口文件
+├── common/                         # 通用功能目录
+│   ├── stringx/                    # 字符串处理工具
+│   │   └── strings.go              # 字符串操作函数
+│   └── syncx/                      # 并发安全工具
+│       ├── lockedcalls.go          # 并发安全调用工具
+│       └── singleflight.go         # 防止缓存击穿工具
 ├── config/                         # 配置管理
 │   └── config.yaml                 # 主配置文件
 ├── internal/                       # 核心业务逻辑代码
@@ -85,17 +91,21 @@ webgos/
 │   │   ├── rbac.go                 # RBAC业务逻辑
 │   │   └── user.go                 # 用户业务逻辑
 │   ├── utils/                      # 公共工具函数
-│   │   ├── response/               # 响应处理
-│   │   │   └── response.go         # 统一响应格式
-│   │   ├── utils.go                # 通用工具函数
-│   │   └── validator.go            # 通用dto参数验证器
+│   │   ├── code/                   # 业务状态码
+│   │   │   └── bizcode.go          # 业务状态码定义
+│   │   ├── param/                  # 参数处理
+│   │   │   └── validator.go        # 参数验证器
+│   │   └── response/               # 响应处理
+│   │       └── response.go         # 统一响应格式
 │   └── xlog/                       # 日志工具
 │       ├── glog.go                 # gorm日志接入实现
 │       └── xlog.go                 # 日志系统实现
 ├── readme/                         # 详细功能说明文档
 │   ├── 商品管理.md                  # 商品管理功能说明
 │   ├── 库存管理.md                  # 库存管理功能说明
-│   └── 权限管理.md                  # 权限管理功能说明
+│   ├── 权限管理.md                  # 权限管理功能说明
+│   ├── 菜单管理.md                  # 菜单管理功能说明
+│   └── 系统管理.md                  # 系统管理功能说明
 ├── docs/                           # API文档
 │   └── swagger/                    # Swagger自动生成的API文档
 ├── tests/                          # 测试代码
