@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"webgos/common/stringx"
+	"webgos/common/convert"
 	"webgos/internal/dto"
 	"webgos/internal/models"
 	"webgos/internal/services"
@@ -135,7 +135,7 @@ func EditMenu(c *gin.Context) {
 // @Router /api/menu/:id [delete]
 // @Security BearerAuth
 func DeleteMenu(c *gin.Context) {
-	ID := stringx.S2Int(c.Param("id"))
+	ID := convert.S2Int(c.Param("id"))
 	// ID := utils.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
@@ -159,7 +159,7 @@ func DeleteMenu(c *gin.Context) {
 // GetMenu 菜单详情
 // @Security BearerAuth
 func GetMenu(c *gin.Context) {
-	ID := stringx.S2Int(c.Param("id"))
+	ID := convert.S2Int(c.Param("id"))
 	// 创建菜单服务
 	menuService := services.NewMenuService()
 	// 获取菜单

@@ -1,4 +1,6 @@
-package stringx
+// 数据类型转换包
+// 包含常用的各种类型转换函数
+package convert
 
 import "strconv"
 

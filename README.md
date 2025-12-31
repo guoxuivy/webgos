@@ -35,12 +35,16 @@ webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 
 webgos/
 ├── cmd/                            # 可执行文件相关代码
 │   └── main.go                     # 程序入口文件
-├── common/                         # 通用功能目录
-│   ├── stringx/                    # 字符串处理工具
-│   │   └── strings.go              # 字符串操作函数
-│   └── syncx/                      # 并发安全工具
-│       ├── lockedcalls.go          # 并发安全调用工具
-│       └── singleflight.go         # 防止缓存击穿工具
+├── common/                         # 常用工具代码收集
+│   ├── convert/                    # 数据类型转换工具
+│   │   └── convert.go              # 类型转换函数
+│   ├── json/                       # JSON处理工具
+│   │   └── json.go                 # JSON编解码封装
+│   ├── syncx/                      # 并发安全工具
+│   │   ├── lockedcalls.go          # 并发安全调用工具
+│   │   └── singleflight.go         # 防止缓存击穿工具
+│   └── time/                       # 时间处理工具
+│       └── time.go                 # 时间格式化和解析函数
 ├── config/                         # 配置管理
 │   └── config.yaml                 # 主配置文件
 ├── internal/                       # 核心业务逻辑代码
