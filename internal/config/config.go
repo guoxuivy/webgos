@@ -18,10 +18,15 @@ type Config struct {
 		DBName   string `yaml:"dbname"`
 	} `yaml:"database"`
 	Server struct {
-		Mode   string `yaml:"mode"` // "debug" 或 "release"
-		LogDir string `yaml:"logdir"`
-		Port   int    `yaml:"port"`
+		Mode string `yaml:"mode"` // "debug" 或 "release"
+		Port int    `yaml:"port"`
 	} `yaml:"server"`
+	Log struct {
+		Level    string `yaml:"level"`     // 日志级别:  Error, Warn, Info
+		Access   bool   `yaml:"access"`    // 是否启用访问日志
+		LevelSQL string `yaml:"level_sql"` // SQL日志级别: Silent, Error, Warn, Info
+		Dir      string `yaml:"dir"`       // 日志保存目录
+	} `yaml:"log"`
 	JWT struct {
 		Secret string `yaml:"secret"`
 		Expiry int    `yaml:"expiry"` // 小时

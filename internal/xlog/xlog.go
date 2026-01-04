@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+	"webgos/internal/config"
+
+	"gorm.io/gorm/logger"
 )
 
 // 定义颜色常量（文本色）
@@ -44,16 +48,68 @@ type log struct {
 }
 
 var Xlogger *log
+var logLevel logger.LogLevel = logger.Info
+
+// 是否开启访问日志
+var logAccess bool
+
+// 使用Xlogger创建一个GORM日志实例
+func NewGormLogger() logger.Interface {
+	if Xlogger == nil {
+		panic("Xlogger is not initialized. Please call InitLogger first.")
+	}
+
+	config := config.GlobalConfig
+	sqllogLevel := logger.Info
+	switch config.Log.LevelSQL {
+	case "Error":
+		sqllogLevel = logger.Error
+	case "Warn":
+		sqllogLevel = logger.Warn
+	case "Info":
+		sqllogLevel = logger.Info
+	case "Silent":
+		sqllogLevel = logger.Silent
+	default:
+		sqllogLevel = logger.Info
+	}
+
+	gormLogger := logger.New(Xlogger, logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  sqllogLevel,
+		IgnoreRecordNotFoundError: false,
+		Colorful:                  true,
+	})
+	return gormLogger
+}
 
 // InitLogger 创建一个新的日志实例
-func InitLogger(logDir string, isDebug bool) error {
+func InitLogger() error {
+	config := config.GlobalConfig
+	logDir := config.Log.Dir
+	switch config.Log.Level {
+	case "Error":
+		logLevel = logger.Error
+	case "Warn":
+		logLevel = logger.Warn
+	case "Info":
+		logLevel = logger.Info
+	default:
+		logLevel = logger.Info
+	}
+	if logDir == "" {
+		logDir = "./logs" // 默认日志目录
+	}
+
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
+	logAccess = config.Log.Access
+
 	Xlogger = &log{
 		logFiles:  make(map[string]*os.File),
-		isDebug:   isDebug,
+		isDebug:   config.Server.Mode == "debug",
 		buffer:    make(chan *logMsg, 200),
 		closeChan: make(chan struct{}),
 		doneChan:  make(chan struct{}),
@@ -66,17 +122,23 @@ func InitLogger(logDir string, isDebug bool) error {
 
 // Info 记录信息级别日志
 func Info(format string, v ...any) {
-	Xlogger.enqueue("INFO", format, v...)
-}
-
-// Error 记录错误级别日志
-func Error(format string, v ...any) {
-	Xlogger.enqueue("ERROR", format, v...)
+	if logLevel >= logger.Info {
+		Xlogger.enqueue("INFO", format, v...)
+	}
 }
 
 // Warn 记录警告级别日志
 func Warn(format string, v ...any) {
-	Xlogger.enqueue("WARN", format, v...)
+	if logLevel >= logger.Warn {
+		Xlogger.enqueue("WARN", format, v...)
+	}
+}
+
+// Error 记录错误级别日志
+func Error(format string, v ...any) {
+	if logLevel >= logger.Error {
+		Xlogger.enqueue("ERROR", format, v...)
+	}
 }
 
 // Debug 记录调试信息
@@ -86,26 +148,30 @@ func Debug(format string, v ...any) {
 
 // Access 记录访问日志
 func Access(format string, v ...any) {
-	Xlogger.enqueue("ACCESS", format, v...)
+	if logAccess {
+		Xlogger.enqueue("ACCESS", format, v...)
+	}
 }
 
-func SQL(format string, v ...any) {
-	Xlogger.enqueue("SQL", format, v...)
+// gorm SQL专用打印函数
+func (l *log) Printf(format string, v ...any) {
+	l.enqueue("SQL", format, v...)
 }
 
 // enqueue 将日志条目加入缓冲通道
 func (l *log) enqueue(level, format string, v ...any) {
 	message := fmt.Sprintf(format, v...)
-
 	// now := time.Now().Format("2006-01-02 15:04:05")
 	now := time.Now().Format("15:04:05")
-	if level == "ACCESS" || level == "SQL" { // 访问日志不需要文件名和行号
+	switch level {
+	case "ACCESS", "SQL":
 		message = fmt.Sprintf("%s %s", now, message)
-	} else {
+	default:
 		_, file, line, _ := runtime.Caller(2)
 		fileName := filepath.Base(file)
 		message = fmt.Sprintf("%s %s:%d - %s", now, fileName, line, message)
 	}
+
 	msg := &logMsg{
 		level:   level,
 		message: message,
@@ -114,12 +180,9 @@ func (l *log) enqueue(level, format string, v ...any) {
 	if Xlogger.isDebug {
 		fmt.Printf("%v[%s]%v %s\n", levelColor[msg.level], msg.level, ColorReset, msg.message)
 	}
-	//移除 msg.message 中的颜色代码
-	msg.message = strings.ReplaceAll(msg.message, ColorReset, "")
-	msg.message = strings.ReplaceAll(msg.message, ColorRed, "")
-	msg.message = strings.ReplaceAll(msg.message, ColorGreen, "")
-	msg.message = strings.ReplaceAll(msg.message, ColorYellow, "")
-	msg.message = strings.ReplaceAll(msg.message, ColorBlue, "")
+	// ANSI颜色代码的正则表达式
+	var ansiColorRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	msg.message = ansiColorRegex.ReplaceAllString(msg.message, "")
 
 	// 将消息发送到缓冲通道
 	select {

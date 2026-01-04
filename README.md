@@ -102,7 +102,6 @@ webgos/
 │   │   └── response/               # 响应处理
 │   │       └── response.go         # 统一响应格式
 │   └── xlog/                       # 日志工具
-│       ├── glog.go                 # gorm日志接入实现
 │       └── xlog.go                 # 日志系统实现
 ├── readme/                         # 详细功能说明文档
 │   ├── 商品管理.md                  # 商品管理功能说明

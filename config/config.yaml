@@ -1,7 +1,6 @@
 # 服务器配置
 server:
-  mode: "debug" # 可选值: debug, release
-  logdir: "./logs" # 日志保存目录
+  mode: "release" # 可选值: debug, release
   port: 8080
 
 # 数据库配置
@@ -12,6 +11,14 @@ database:
   password: "123456"
   dbname: "hserp"
   dialect: "mysql"
+
+# 日志配置，严格大小写
+log:
+  level: "Info" # 日志级别:  Error, Warn, Info
+  access: true # 是记录访问日志
+  level_sql: "Info" # SQL日志级别: Silent, Error, Warn, Info
+  dir: "./logs" # 日志保存目录
+
 
 # JWT配置
 jwt:

@@ -11,7 +11,7 @@ import (
 
 func TestMain(m *testing.M) {
 	// 初始化测试日志系统
-	xlog.InitLogger("./logs", true)
+	xlog.InitLogger()
 
 	// 初始化测试数据库
 	code := m.Run()

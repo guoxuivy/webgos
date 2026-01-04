@@ -60,6 +60,7 @@ func (s *authService) Login(username, password string) (string, error) {
 	}
 
 	// 将令牌存入缓存，设置与令牌相同的过期时间
+	// todo也可以使用黑名单方式实现登出功能，不用缓存储大量令牌
 	tokenCache.Set(tokenString, true, time.Duration(jwtConfig.Expiry)*time.Hour)
 
 	return tokenString, nil

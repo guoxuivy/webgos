@@ -21,11 +21,8 @@ func Initialize(config *config.Config) error {
 		config.Database.Port, config.Database.DBName)
 
 	// 初始化日志
-	logDir := config.Server.LogDir
-	if logDir == "" {
-		logDir = "./logs" // 默认日志目录
-	}
-	err := xlog.InitLogger(logDir, config.Server.Mode == "debug") // 将logger替换为xlog
+
+	err := xlog.InitLogger() // 将logger替换为xlog
 	if err != nil {
 		panic(fmt.Sprintf("failed to initialize logger: %v", err))
 	}
