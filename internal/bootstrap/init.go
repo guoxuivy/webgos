@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"webgos/internal/config"
 	"webgos/internal/database"
+	"webgos/internal/database/migrate" // 添加数据库迁移包导入
 	"webgos/internal/routes"
 	"webgos/internal/xlog"
 )
@@ -26,7 +27,7 @@ func Initialize(configPath string) error {
 	}
 
 	// 自动迁移模型
-	if err = AutoMigrate(); err != nil {
+	if err = migrate.AutoMigrate(); err != nil {
 		return fmt.Errorf("Model migration error: %v", err)
 	}
 

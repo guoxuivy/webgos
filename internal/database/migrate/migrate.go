@@ -1,4 +1,4 @@
-package bootstrap
+package migrate
 
 import (
 	"webgos/internal/config"
