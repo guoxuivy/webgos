@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"webgos/internal/config"
 	"webgos/internal/database"
-	"webgos/internal/database/migrate" // 添加数据库迁移包导入
+	"webgos/internal/database/migrate"
 	"webgos/internal/routes"
 	"webgos/internal/xlog"
 )
