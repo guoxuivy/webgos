@@ -12,12 +12,13 @@ import (
 	"time"
 	"webgos/internal/bootstrap"
 	"webgos/internal/config"
+	"webgos/internal/routes"
 	"webgos/internal/xlog"
+
+	_ "webgos/docs"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-
-	_ "webgos/docs"
 )
 
 // @title webgos API
@@ -36,27 +37,20 @@ func main() {
 	configPath := flag.String("c", "./config/config.yaml", "Specify the config file path")
 	flag.Parse()
 
-	// 加载配置
-	config, err := config.LoadConfig(*configPath)
-	if err != nil {
-		fmt.Println("Failed to load config: ", err.Error())
-		panic("failed to load config: " + err.Error())
-	}
-
 	// 初始化项目
-	if err := bootstrap.Initialize(config); err != nil {
-		fmt.Println("Project initialization error: ", err.Error())
+	if err := bootstrap.Initialize(*configPath); err != nil {
 		panic("failed to initialize project: " + err.Error())
 	}
+	globalConfig := config.GlobalConfig
 
 	// 创建 http.Server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.Server.Port),
-		Handler: bootstrap.R,
+		Addr:    fmt.Sprintf(":%d", globalConfig.Server.Port),
+		Handler: routes.REngine,
 	}
 
-	r := bootstrap.R // 获取初始化后的gin.Engine
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
+	// 按需开启Swagger文档
+	routes.REngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
 
 	quit := make(chan os.Signal, 1)
 	// kill -SIGINT 或 kill -SIGTERM 会触发优雅关闭 kill <pid> 或 kill -2 <pid>
@@ -74,7 +68,7 @@ func main() {
 		close(idleConnsClosed)
 	}()
 
-	xlog.Access("Server started on port %d", config.Server.Port)
+	xlog.Access("Server started on port %d", globalConfig.Server.Port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Printf("listen: %s\n", err)
 	}

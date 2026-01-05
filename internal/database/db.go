@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"time"
+	"webgos/internal/config"
 	"webgos/internal/xlog"
 
 	"gorm.io/driver/mysql"
@@ -12,11 +13,15 @@ import (
 var DB *gorm.DB
 
 // InitDB 初始化数据库连接
-func InitDB(dsn string) (*gorm.DB, error) {
-	gormLogger := xlog.NewGormLogger()
+func InitDB() (*gorm.DB, error) {
+	globalConfig := config.GlobalConfig
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		globalConfig.Database.Username, globalConfig.Database.Password, globalConfig.Database.Host,
+		globalConfig.Database.Port, globalConfig.Database.DBName)
 
 	sqlDB, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
+		Logger: xlog.NewGormLogger(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect database: %w", err)

@@ -1,6 +1,6 @@
 # 服务器配置
 server:
-  mode: "release" # 可选值: debug, release
+  mode: "debug" # 可选值: debug, release
   port: 8080
 
 # 数据库配置

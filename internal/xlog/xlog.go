@@ -59,9 +59,9 @@ func NewGormLogger() logger.Interface {
 		panic("Xlogger is not initialized. Please call InitLogger first.")
 	}
 
-	config := config.GlobalConfig
+	globalConfig := config.GlobalConfig
 	sqllogLevel := logger.Info
-	switch config.Log.LevelSQL {
+	switch globalConfig.Log.LevelSQL {
 	case "Error":
 		sqllogLevel = logger.Error
 	case "Warn":
@@ -85,31 +85,33 @@ func NewGormLogger() logger.Interface {
 
 // InitLogger 创建一个新的日志实例
 func InitLogger() error {
+	logDir := "./logs" // 默认日志目录
 	config := config.GlobalConfig
-	logDir := config.Log.Dir
-	switch config.Log.Level {
-	case "Error":
-		logLevel = logger.Error
-	case "Warn":
-		logLevel = logger.Warn
-	case "Info":
-		logLevel = logger.Info
-	default:
-		logLevel = logger.Info
-	}
-	if logDir == "" {
-		logDir = "./logs" // 默认日志目录
+	logAccess = true // 默认开启访问日志
+	isDebug := true
+	if config != nil {
+		logDir = config.Log.Dir
+		logAccess = config.Log.Access
+		isDebug = config.Server.Mode == "debug"
+		switch config.Log.Level {
+		case "Error":
+			logLevel = logger.Error
+		case "Warn":
+			logLevel = logger.Warn
+		case "Info":
+			logLevel = logger.Info
+		default:
+			logLevel = logger.Info
+		}
 	}
 
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	logAccess = config.Log.Access
-
 	Xlogger = &log{
 		logFiles:  make(map[string]*os.File),
-		isDebug:   config.Server.Mode == "debug",
+		isDebug:   isDebug,
 		buffer:    make(chan *logMsg, 200),
 		closeChan: make(chan struct{}),
 		doneChan:  make(chan struct{}),

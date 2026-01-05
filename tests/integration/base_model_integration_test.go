@@ -11,6 +11,7 @@ import (
 	"webgos/internal/xlog"
 
 	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -43,14 +44,11 @@ func setupTestDB() error {
 	// 构建DSN字符串 - 使用现有数据库进行测试
 	dsn := "root:123456@tcp(localhost:3306)/hserp?charset=utf8mb4&parseTime=True&loc=Local"
 
-	// 初始化测试数据库
-	_, err := database.InitDB(dsn)
+	sqlDB, err := gorm.Open(mysql.Open(dsn))
 	if err != nil {
-		// 如果连接失败，打印错误但不中断测试
-		// 因为有些测试不需要数据库连接
-		return err
+		return fmt.Errorf("failed to connect database: %w", err)
 	}
-
+	database.DB = sqlDB
 	return nil
 }
 
