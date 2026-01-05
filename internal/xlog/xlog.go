@@ -86,9 +86,10 @@ func NewGormLogger() logger.Interface {
 // InitLogger 创建一个新的日志实例
 func InitLogger() error {
 	logDir := "./logs" // 默认日志目录
-	config := config.GlobalConfig
-	logAccess = true // 默认开启访问日志
+	logAccess = true   // 默认开启访问日志
 	isDebug := true
+
+	config := config.GlobalConfig
 	if config != nil {
 		logDir = config.Log.Dir
 		logAccess = config.Log.Access
@@ -106,7 +107,7 @@ func InitLogger() error {
 	}
 
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return fmt.Errorf("failed to create log directory: %w", err)
+		return fmt.Errorf("failed to create log directory: %w - %v", err, logDir)
 	}
 
 	Xlogger = &log{

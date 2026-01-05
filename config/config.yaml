@@ -22,12 +22,12 @@ log:
 
 # JWT配置
 jwt:
-  secret: "hserp_secret_key"
+  secret: "webgos_secret_key"
   expiry: 24 # 小时
 
 # 自动迁移配置 (默认为false)
 auto_migrate: false
 # 自动同步RBAC权限点 (默认为false)
-auto_rbac_point: true
+auto_rbac_point: false
 # 超级管理员账号
 super_account: "super"

@@ -86,5 +86,22 @@ func validateConfig(config *Config) error {
 		return fmt.Errorf("invalid config: %s", strings.Join(errs, ", "))
 	}
 
+	// 设置默认值
+	if config.Server.Mode == "" {
+		config.Server.Mode = "debug" // 设置默认值
+	}
+	if config.Log.Dir == "" {
+		config.Log.Dir = "./logs" // 设置默认值
+	}
+	if config.Log.Level == "" {
+		config.Log.Level = "Info" // 设置默认值
+	}
+	if config.Log.LevelSQL == "" {
+		config.Log.LevelSQL = "Info" // 设置默认值
+	}
+	if config.JWT.Secret == "" {
+		config.JWT.Secret = "sean_secret_key" // 默认值
+	}
+
 	return nil
 }

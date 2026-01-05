@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"webgos/internal/config"
 	"webgos/internal/database"
-	"webgos/internal/database/migrate"
 	"webgos/internal/routes"
 	"webgos/internal/xlog"
 )
@@ -17,26 +16,18 @@ func Initialize(configPath string) error {
 	}
 
 	// 初始化日志
-	err = xlog.InitLogger() // 将logger替换为xlog
-	if err != nil {
+	if err = xlog.InitLogger(); err != nil {
 		return fmt.Errorf("failed to initialize logger: %v", err)
 	}
 
 	// 初始化数据库
-	_, err = database.InitDB()
-	if err != nil {
+	if _, err = database.InitDB(); err != nil {
 		return fmt.Errorf("Database initialization error: %v", err)
 	}
 
-	// 自动迁移模型（根据配置决定是否执行）
-	if globalConfig.AutoMigrate {
-		xlog.Access("Starting auto migration...")
-		if err := migrate.AutoMigrate(); err != nil {
-			return fmt.Errorf("Model migration error: %v", err)
-		}
-		xlog.Access("Auto migration completed")
-	} else {
-		xlog.Access("Auto migration is disabled")
+	// 自动迁移模型
+	if err = AutoMigrate(); err != nil {
+		return fmt.Errorf("Model migration error: %v", err)
 	}
 
 	// 注册路由
@@ -53,5 +44,7 @@ func Initialize(configPath string) error {
 func Close() {
 	xlog.Access("Closing resources...")
 	database.CloseDB()
-	xlog.Xlogger.Close()
+	if xlog.Xlogger != nil {
+		xlog.Xlogger.Close()
+	}
 }

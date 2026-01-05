@@ -43,6 +43,9 @@ func InitDB() (*gorm.DB, error) {
 }
 
 func CloseDB() {
+	if DB == nil {
+		return
+	}
 	sqlDB, err := DB.DB()
 	if err != nil {
 		fmt.Println("Failed to get database instance:", err)
