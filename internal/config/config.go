@@ -11,11 +11,15 @@ import (
 // Config 配置结构体
 type Config struct {
 	Database struct {
-		Host     string `yaml:"host"`
-		Port     int    `yaml:"port"`
-		Username string `yaml:"username"`
-		Password string `yaml:"password"`
-		DBName   string `yaml:"dbname"`
+		Host         string `yaml:"host"`
+		Port         int    `yaml:"port"`
+		Username     string `yaml:"username"`
+		Password     string `yaml:"password"`
+		DBName       string `yaml:"dbname"`
+		Dialect      string `yaml:"dialect"`        // "mysql" 或 "postgres"
+		MaxLifetime  int    `yaml:"max_lifetime"`   // 连接池中连接的最长生命周期 单位分钟
+		MaxOpenConns int    `yaml:"max_open_conns"` // 最大打开连接数
+		MaxIdleConns int    `yaml:"max_idle_conns"` // 最大空闲连接数
 	} `yaml:"database"`
 	Server struct {
 		Mode string `yaml:"mode"` // "debug" 或 "release"
@@ -90,17 +94,28 @@ func validateConfig(config *Config) error {
 	if config.Server.Mode == "" {
 		config.Server.Mode = "debug" // 设置默认值
 	}
+
+	if config.Database.MaxOpenConns == 0 {
+		config.Database.MaxOpenConns = 20
+	}
+	if config.Database.MaxIdleConns == 0 {
+		config.Database.MaxIdleConns = 5
+	}
+	if config.Database.MaxLifetime == 0 {
+		config.Database.MaxLifetime = 60
+	}
+
 	if config.Log.Dir == "" {
-		config.Log.Dir = "./logs" // 设置默认值
+		config.Log.Dir = "./logs"
 	}
 	if config.Log.Level == "" {
-		config.Log.Level = "Info" // 设置默认值
+		config.Log.Level = "Info"
 	}
 	if config.Log.LevelSQL == "" {
-		config.Log.LevelSQL = "Info" // 设置默认值
+		config.Log.LevelSQL = "Info"
 	}
 	if config.JWT.Secret == "" {
-		config.JWT.Secret = "sean_secret_key" // 默认值
+		config.JWT.Secret = "sean_secret_key"
 	}
 
 	return nil

@@ -11,6 +11,9 @@ database:
   password: "123456"
   dbname: "hserp"
   dialect: "mysql"
+  max_open_conns: 20 # 最大打开连接数
+  max_idle_conns: 5 # 最大空闲连接数
+  max_lifetime: 60 # 单位: 分钟
 
 # 日志配置，严格大小写
 log:
@@ -26,8 +29,8 @@ jwt:
   expiry: 24 # 小时
 
 # 自动迁移配置 (默认为false)
-auto_migrate: false
+auto_migrate: true
 # 自动同步RBAC权限点 (默认为false)
-auto_rbac_point: false
+auto_rbac_point: true
 # 超级管理员账号
 super_account: "super"
