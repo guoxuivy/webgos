@@ -63,6 +63,7 @@ type IActiveRecord[T any] interface {
 	//        if err := tx.Create(user).Error; err != nil {
 	//            return err // 回滚事务
 	//        }
+	//        user.WithTx(tx).More(); // 使用事务查询用户列表
 	//
 	//        // 创建用户配置
 	//        profile := &Profile{UserID: user.ID, Bio: "Hello"}
