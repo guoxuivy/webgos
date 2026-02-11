@@ -342,6 +342,10 @@ type IActiveRecord[T any] interface {
 	// 返回值: 支持链式调用的接口
 	Where(query any, args ...any) IActiveRecord[T]
 
+	// Scopes 添加多个WHERE条件
+	// 封装可复用的数据库查询逻辑
+	Scopes(funcs ...func(*gorm.DB) *gorm.DB) IActiveRecord[T]
+
 	// Select 指定要查询的字段
 	// 参数 query: 要查询的字段
 	// 参数 args: 查询字段参数
@@ -544,6 +548,12 @@ func (c *BaseModel[T]) Exist() (bool, error) {
 	return true, nil
 }
 
+func (c *BaseModel[T]) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error) {
+	// 使用当前绑定的数据库连接，而不是直接使用全局连接
+	// 这样可以尊重通过WithTx绑定的事务，实现正确的事务嵌套
+	return c.getQuery().Transaction(fc, opts...)
+}
+
 func (c *BaseModel[T]) Page(page, pageSize int) ([]T, int, error) {
 	var items []T
 	// 确保页数从1开始
@@ -582,6 +592,13 @@ func (c *BaseModel[T]) Where(query any, args ...any) IActiveRecord[T] {
 	newQuery := *c
 	newQuery.queryHandler = newDB
 	// 3. 返回新查询器
+	return &newQuery
+}
+
+func (c *BaseModel[T]) Scopes(funcs ...func(*gorm.DB) *gorm.DB) IActiveRecord[T] {
+	newDB := c.getQuery().Scopes(funcs...)
+	newQuery := *c
+	newQuery.queryHandler = newDB
 	return &newQuery
 }
 
@@ -653,10 +670,4 @@ func (c *BaseModel[T]) InnerJoins(query string, args ...any) IActiveRecord[T] {
 	newQuery := *c
 	newQuery.queryHandler = newDB
 	return &newQuery
-}
-
-func (c *BaseModel[T]) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error) {
-	// 使用当前绑定的数据库连接，而不是直接使用全局连接
-	// 这样可以尊重通过WithTx绑定的事务，实现正确的事务嵌套
-	return c.getQuery().Transaction(fc, opts...)
 }
