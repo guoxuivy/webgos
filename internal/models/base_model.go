@@ -150,19 +150,26 @@ type IActiveRecord[T any] interface {
 	//   - error: 可能的错误，包括 gorm.ErrRecordNotFound
 	Read(id int) (*T, error)
 
-	// Update 更新一条记录
+	// Update 更新一条对象记录
 	// 参数 item: 包含更新数据的记录对象
 	// 返回值: 更新过程中可能发生的错误
 	// 只会更新非零值字段，如果要更新全部字段，请使加上Select("*")
 	Update(item *T) error
 
-	// UpdateColumns 更新指定字段
+	// UpdateColumns 更新指定字段 多字段
 	// 使用gorm的UpdateColumns方法更新指定字段
 	// 参数 columns: 要更新的字段及其新值的映射
 	// 返回值: 更新过程中可能发生的错误
 	// 如果存在 WHERE 条件，则使用该条件更新记录
 	// 否则，使用模型主键ID作为WHERE条件
 	UpdateColumns(columns map[string]any) error
+
+	// UpdateColumn 更新指定字段 单字段
+	// 使用gorm的UpdateColumn方法更新指定字段
+	// 参数 column: 要更新的字段名
+	// 参数 value: 新值
+	// 返回值: 更新过程中可能发生的错误
+	UpdateColumn(column string, value any) error
 
 	// Delete 根据ID删除一条记录（软删除）
 	// 参数 id: 要删除记录的ID
@@ -265,9 +272,14 @@ type IActiveRecord[T any] interface {
 	//   - 会根据查询条件查找记录，如果不存在则创建
 	//   - 创建时会使用传入的结构体作为默认值
 	//
-	// 参数 item: 要创建的记录对象
+	// 参数 dest: 要创建的记录对象
+	// 参数 conds: 查询条件，用于查找记录是否存在
 	// 返回值: 查询到或创建的记录对象和可能发生的错误
-	FirstOrCreate(item *T) error
+	//原方法转发 Find、First、FirstOrCreate、Table
+	FirstOrCreate(dest any, conds ...any) error
+	Find(dest any, conds ...any) error
+	First(dest any, conds ...any) error
+	Table(tableName string, args ...any) IActiveRecord[T]
 
 	// Count 统计记录总数
 	// 返回值: 记录总数和可能发生的错误
@@ -341,6 +353,10 @@ type IActiveRecord[T any] interface {
 	// 参数 args: 查询条件参数
 	// 返回值: 支持链式调用的接口
 	Where(query any, args ...any) IActiveRecord[T]
+
+	// HasWhere 检查是否有WHERE条件
+	// 返回值: 是否有WHERE条件
+	HasWhere() bool
 
 	// Scopes 添加多个WHERE条件
 	// 封装可复用的数据库查询逻辑
@@ -481,7 +497,7 @@ func (c *BaseModel[T]) Update(item *T) error {
 // 如果存在 WHERE 条件，则使用该条件更新记录
 // 否则，使用模型主键ID作为WHERE条件
 func (c *BaseModel[T]) UpdateColumns(columns map[string]any) error {
-	if c.hasWhere() {
+	if c.HasWhere() {
 		return c.getQuery().Model((*T)(nil)).UpdateColumns(columns).Error
 	} else {
 		if c.ID == 0 {
@@ -490,7 +506,17 @@ func (c *BaseModel[T]) UpdateColumns(columns map[string]any) error {
 		return c.getQuery().Model((*T)(nil)).Where("id = ?", c.ID).UpdateColumns(columns).Error
 	}
 }
-func (c *BaseModel[T]) hasWhere() bool {
+func (c *BaseModel[T]) UpdateColumn(column string, value any) error {
+	if c.HasWhere() {
+		return c.getQuery().Model((*T)(nil)).UpdateColumn(column, value).Error
+	} else {
+		if c.ID == 0 {
+			return errors.New("no id found")
+		}
+		return c.getQuery().Model((*T)(nil)).Where("id = ?", c.ID).UpdateColumn(column, value).Error
+	}
+}
+func (c *BaseModel[T]) HasWhere() bool {
 	stmt := c.getQuery().Statement
 	// 检查Statement是否为空
 	if stmt == nil {
@@ -514,7 +540,7 @@ func (c *BaseModel[T]) More() ([]T, error) {
 }
 
 func (c *BaseModel[T]) Pluck(column string, dest any) error {
-	return c.getQuery().Pluck(column, dest).Error
+	return c.getQuery().Model((*T)(nil)).Pluck(column, dest).Error
 }
 
 func (c *BaseModel[T]) One() (*T, error) {
@@ -523,8 +549,14 @@ func (c *BaseModel[T]) One() (*T, error) {
 	return &item, err
 }
 
-func (c *BaseModel[T]) FirstOrCreate(item *T) error {
-	return c.getQuery().FirstOrCreate(item).Error
+func (c *BaseModel[T]) FirstOrCreate(dest any, conds ...any) error {
+	return c.getQuery().FirstOrCreate(dest, conds...).Error
+}
+func (c *BaseModel[T]) Find(dest any, conds ...any) error {
+	return c.getQuery().Find(dest, conds...).Error
+}
+func (c *BaseModel[T]) First(dest any, conds ...any) error {
+	return c.getQuery().First(dest, conds...).Error
 }
 
 func (c *BaseModel[T]) Count() (int, error) {
@@ -556,6 +588,7 @@ func (c *BaseModel[T]) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOp
 
 func (c *BaseModel[T]) Page(page, pageSize int) ([]T, int, error) {
 	var items []T
+	var total int64
 	// 确保页数从1开始
 	if page < 1 {
 		page = 1
@@ -567,20 +600,11 @@ func (c *BaseModel[T]) Page(page, pageSize int) ([]T, int, error) {
 	} else if pageSize > 1000 {
 		pageSize = 1000 // 最大每页1000条记录
 	}
-
-	total, err := c.Count()
-	if err != nil {
-		return items, total, err
-	}
-
-	if total == 0 {
-		return items, total, nil
-	}
-
 	// 计算偏移量 (页数-1)*每页记录数
 	offset := (page - 1) * pageSize
-	err = c.getQuery().Offset(offset).Limit(pageSize).Find(&items).Error
-	return items, total, err
+	// 链式调用Count() - 需要明确指定Model
+	err := c.getQuery().Model((*T)(nil)).Count(&total).Offset(offset).Limit(pageSize).Find(&items).Error
+	return items, int(total), err
 }
 
 // ------------------------------ gorm核心查询方法包装（链式） ------------------------------
@@ -592,6 +616,13 @@ func (c *BaseModel[T]) Where(query any, args ...any) IActiveRecord[T] {
 	newQuery := *c
 	newQuery.queryHandler = newDB
 	// 3. 返回新查询器
+	return &newQuery
+}
+
+func (c *BaseModel[T]) Table(tableName string, args ...any) IActiveRecord[T] {
+	newDB := c.getQuery().Table(tableName, args...)
+	newQuery := *c
+	newQuery.queryHandler = newDB
 	return &newQuery
 }
 
