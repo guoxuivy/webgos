@@ -78,6 +78,7 @@ func NewGormLogger() logger.Interface {
 		SlowThreshold:             200 * time.Millisecond,
 		LogLevel:                  sqllogLevel,
 		IgnoreRecordNotFoundError: false,
+		ParameterizedQueries:      false,
 		Colorful:                  true,
 	})
 	return gormLogger

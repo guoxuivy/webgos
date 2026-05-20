@@ -20,4 +20,7 @@ func ApplyMiddlewares(r *gin.Engine, config *config.Config) {
 	// 跨域中间件
 	r.Use(CORS())
 
+	// Gzip压缩中间件（放在跨域之后，确保响应头正确设置）
+	r.Use(Gzip())
+
 }

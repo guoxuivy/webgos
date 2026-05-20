@@ -2,7 +2,7 @@
 server:
   mode: "debug" # 可选值: debug, release
   port: 8080
-  swag: false
+  swag: true # 是否启用 Swagger 文档接口
 
 # 数据库配置
 database:
@@ -16,18 +16,38 @@ database:
   max_idle_conns: 5 # 最大空闲连接数
   max_lifetime: 60 # 单位: 分钟
 
+  # 备库配置
+  read_write_separation: false # 是否启用读写分离
+  slave_load_balance: "random" # 备库负载均衡策略：random, round_robin（轮询）
+  slaves:
+    - host: "rds-slave1.xxx.rds.aliyuncs.com"
+      port: 5432
+      username: "webgos"
+      password: "123456"
+      dbname: "webgos"
+      max_open_conns: 80
+      max_idle_conns: 20
+      max_lifetime: 30
+    - host: "rds-slave2.xxx.rds.aliyuncs.com"
+      port: 5432
+      username: "webgos"
+      password: "123456"
+      dbname: "webgos"
+      max_open_conns: 80
+      max_idle_conns: 20
+      max_lifetime: 30
+
 # 日志配置，严格大小写
 log:
   level: "Info" # 日志级别:  Error, Warn, Info
   access: true # 是记录访问日志
   level_sql: "Info" # SQL日志级别: Silent, Error, Warn, Info
-  dir: "./runtime/logs" # 日志保存目录
-  
+  dir: "./logs" # 日志保存目录
+
 website:
   dir: "./public" # 网站根目录
   upload_url: "/upload" # 上传文件保存目录 相对public
   upload_temp_url: "/upload/temp"  # 临时文件目录 相对public
-
 
 # JWT配置
 jwt:
@@ -37,6 +57,6 @@ jwt:
 # 自动迁移配置 (默认为false)
 auto_migrate: true
 # 自动同步RBAC权限点 (默认为false)
-auto_rbac_point: false
+auto_rbac_point: true
 # 超级管理员账号
 super_account: "super"

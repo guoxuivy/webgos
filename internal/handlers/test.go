@@ -92,7 +92,7 @@ func TestTransaction(c *gin.Context) {
 // @Router /test/TestTransaction2 [get]
 func TestTransaction2(c *gin.Context) {
 
-	tx := database.DB.Begin()
+	tx := database.GetDB().Begin()
 
 	// 创建用户模型实例
 	user := models.User{}

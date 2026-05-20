@@ -4,5 +4,9 @@
 /cmd/logs
 /tests/logs
 /frontend
-logs
-/docs/*
+/logs
+/docs
+/uploads
+/config/config.yaml
+/runtime
+/public

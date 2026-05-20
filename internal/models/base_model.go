@@ -18,7 +18,7 @@ type IActiveRecord[T any] interface {
 	//
 	// 示例:
 	//    // 在事务中执行操作
-	//    err := database.DB.Transaction(func(tx *gorm.DB) error {
+	//    err := database.GetDB().Transaction(func(tx *gorm.DB) error {
 	//        // 绑定事务对象到模型
 	//        userTxModel := userModel.WithTx(tx)
 	//
@@ -468,8 +468,8 @@ func (c *BaseModel[T]) getQuery() *gorm.DB {
 	if c.queryHandler != nil {
 		return c.queryHandler
 	}
-	// 默认使用全局的 database.DB
-	return database.DB
+	// 默认使用全局的 database.GetDB()
+	return database.GetDB()
 }
 
 func (c *BaseModel[T]) Create(item *T) error {

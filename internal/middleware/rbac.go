@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strconv"
 	"time"
 	"webgos/internal/config"
 	"webgos/internal/database"
@@ -8,13 +9,9 @@ import (
 	"webgos/internal/utils/response"
 
 	"github.com/gin-gonic/gin"
-	"github.com/patrickmn/go-cache"
-)
 
-// 全局权限缓存实例
-// 缓存用户权限，键为 user_id，值为权限映射 map[string]bool
-// 缓存过期时间：10分钟，清理间隔：30分钟
-var permissionCache = cache.New(10*time.Minute, 30*time.Minute)
+	"webgos/internal/cache"
+)
 
 // RBAC 中间件用于检查用户权限 RBAC 通过路由节点自动检查
 // 该中间件会在请求上下文中查找用户ID，并根据用户ID查询用户的角色和权限
@@ -27,27 +24,21 @@ var permissionCache = cache.New(10*time.Minute, 30*time.Minute)
 func RBAC() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		userIDInterface, exists := c.Get("user_id")
-		if !exists {
+		userID := c.GetInt("user_id")
+		if userID == 0 {
 			response.AuthError(c, "缺少用户信息")
 			return
 		}
 
-		userID, ok := userIDInterface.(string)
-		if !ok || userID == "" {
-			response.AuthError(c, "用户信息格式错误")
-			return
-		}
-
 		// 从缓存获取用户权限
-		cacheKey := "permissions:" + userID
-		userPermissions, found := permissionCache.Get(cacheKey)
+		cacheKey := "permissions:" + strconv.Itoa(userID)
+		userPermissions, found := cache.GetCache().Get(cacheKey)
 		var permissions map[string]bool
 
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User
-			if err := database.DB.Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
+			if err := database.GetDB().Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
 				response.AuthError(c, "用户不存在")
 				return
 			}
@@ -64,18 +55,18 @@ func RBAC() gin.HandlerFunc {
 					permissions[key] = true
 				}
 			}
-
 			// 将权限存入缓存
-			permissionCache.Set(cacheKey, permissions, cache.DefaultExpiration)
+			cache.GetCache().Set(cacheKey, permissions, 5*time.Minute)
 		} else {
 			// 缓存命中，直接使用缓存的权限
-			permissions, ok = userPermissions.(map[string]bool)
+			permissionsMap, ok := userPermissions.(map[string]bool)
 			if !ok {
 				// 缓存类型错误，重新查询或拒绝请求
-				permissionCache.Delete(cacheKey)
+				cache.GetCache().Delete(cacheKey)
 				response.AuthError(c, "权限验证失败")
 				return
 			}
+			permissions = permissionsMap
 		}
 
 		// 检查当前请求是否有权限

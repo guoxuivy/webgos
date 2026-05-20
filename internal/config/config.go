@@ -11,19 +11,37 @@ import (
 // Config 配置结构体
 type Config struct {
 	Database struct {
-		Host         string `yaml:"host"`
-		Port         int    `yaml:"port"`
-		Username     string `yaml:"username"`
-		Password     string `yaml:"password"`
-		DBName       string `yaml:"dbname"`
-		Dialect      string `yaml:"dialect"`        // "mysql" 或 "postgres"
-		MaxLifetime  int    `yaml:"max_lifetime"`   // 连接池中连接的最长生命周期 单位分钟
-		MaxOpenConns int    `yaml:"max_open_conns"` // 最大打开连接数
-		MaxIdleConns int    `yaml:"max_idle_conns"` // 最大空闲连接数
+		// 主库配置
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+		DBName   string `yaml:"dbname"`
+		Dialect  string `yaml:"dialect"`
+		// 连接池配置（主库）
+		MaxOpenConns int `yaml:"max_open_conns"`
+		MaxIdleConns int `yaml:"max_idle_conns"`
+		MaxLifetime  int `yaml:"max_lifetime"`
+		// 读写分离策略（新增）
+		ReadWriteSeparation bool   `yaml:"read_write_separation"` // 是否启用读写分离
+		SlaveLoadBalance    string `yaml:"slave_load_balance"`    // 备库负载均衡策略：random, round_robin（轮询）
+		// 备库配置（新增）
+		Slaves []struct {
+			Host     string `yaml:"host"`
+			Port     int    `yaml:"port"`
+			Username string `yaml:"username"`
+			Password string `yaml:"password"`
+			DBName   string `yaml:"dbname"`
+			// 备库连接池配置
+			MaxOpenConns int `yaml:"max_open_conns"`
+			MaxIdleConns int `yaml:"max_idle_conns"`
+			MaxLifetime  int `yaml:"max_lifetime"`
+		} `yaml:"slaves"`
 	} `yaml:"database"`
 	Server struct {
 		Mode string `yaml:"mode"` // "debug" 或 "release"
-		Port int    `yaml:"port"`
+		Port int    `yaml:"port"` // 服务器端口
+		Swag bool   `yaml:"swag"` // 是否启用 Swagger 文档接口
 	} `yaml:"server"`
 	Log struct {
 		Level    string `yaml:"level"`     // 日志级别:  Error, Warn, Info
@@ -35,6 +53,12 @@ type Config struct {
 		Secret string `yaml:"secret"`
 		Expiry int    `yaml:"expiry"` // 小时
 	} `yaml:"jwt"`
+	Website struct {
+		Dir           string `yaml:"dir"`             // website 根目录
+		UploadUrl     string `yaml:"upload_url"`      // 临时文件目录
+		UploadTempUrl string `yaml:"upload_temp_url"` // 临时文件目录
+	} `yaml:"website"`
+
 	// 自动迁移配置
 	AutoMigrate bool `yaml:"auto_migrate"`
 	// 自动同步RBAC权限点
@@ -106,7 +130,7 @@ func validateConfig(config *Config) error {
 	}
 
 	if config.Log.Dir == "" {
-		config.Log.Dir = "./logs"
+		config.Log.Dir = "./runtime/logs"
 	}
 	if config.Log.Level == "" {
 		config.Log.Level = "Info"
@@ -116,6 +140,17 @@ func validateConfig(config *Config) error {
 	}
 	if config.JWT.Secret == "" {
 		config.JWT.Secret = "sean_secret_key"
+	}
+
+	// 设置上传目录默认值
+	if config.Website.Dir == "" {
+		config.Website.Dir = "./public"
+	}
+	if config.Website.UploadUrl == "" {
+		config.Website.UploadUrl = "/upload"
+	}
+	if config.Website.UploadTempUrl == "" {
+		config.Website.UploadTempUrl = "/upload/temp"
 	}
 
 	return nil

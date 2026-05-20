@@ -29,7 +29,7 @@ func Validate(c *gin.Context, dto any) error {
 	}
 
 	// 验证数据
-	validate := GetValidator()
+	validate = GetValidator()
 	if err := validate.Struct(dto); err != nil {
 		// 使用 ValidationError 函数处理验证错误，会自动使用 label 标签
 		return ValidationError(err)
@@ -47,7 +47,7 @@ func ValidateUri(c *gin.Context, dto any) error {
 	}
 
 	// 验证数据
-	validate := GetValidator()
+	validate = GetValidator()
 	if err := validate.Struct(dto); err != nil {
 		// 使用 ValidationError 函数处理验证错误，会自动使用 label 标签
 		return ValidationError(err)
@@ -81,7 +81,7 @@ func addDefaultValidations(v *validator.Validate) {
 	})
 
 	// 注册自定义验证规则：手机号验证
-	_ = v.RegisterValidation("phone", func(fl validator.FieldLevel) bool {
+	v.RegisterValidation("phone", func(fl validator.FieldLevel) bool {
 		phone := fl.Field().String()
 		if phone == "" {
 			return true // 允许空值（配合omitempty使用）
@@ -90,6 +90,38 @@ func addDefaultValidations(v *validator.Validate) {
 		match, _ := regexp.MatchString(`^1[3-9]\d{9}$`, phone)
 		return match
 	})
+	// 在验证器中注册自定义验证函数，设置runValidationOnNil=true确保在nil字段上执行验证
+	// 确保被验证字段加上required_if_add,omitnil标签，否则后续验证规则会报错，如果没有后续验证规则可以不加
+	v.RegisterValidation("required_if_add", func(fl validator.FieldLevel) bool {
+		// 使用反射获取ID字段值
+		structValue := reflect.ValueOf(fl.Top().Interface())
+		if structValue.Kind() == reflect.Ptr {
+			structValue = structValue.Elem()
+		}
+		// 查找ID字段
+		idField := structValue.FieldByName("ID")
+		if !idField.IsValid() || !idField.CanInt() {
+			// 如果没有ID字段或不是整数类型，跳过验证
+			return true
+		}
+		idValue := idField.Int()
+		if idValue > 0 {
+			return true
+		}
+
+		// 当前被验证的字段
+		field := fl.Field()
+		// 对于指针类型字段的处理逻辑
+		if field.Kind() == reflect.Ptr {
+			if field.IsNil() {
+				return false
+			}
+			// 指针不为nil：检查指向的值是否为空
+			return !field.Elem().IsZero()
+		}
+		// 值类型：零值表示传了空值，应该验证失败
+		return !field.IsZero()
+	}, true) // 第三个参数设置为true，确保在nil字段上执行验证
 }
 
 // ValidationError 处理验证错误，使用label标签给出错误提示

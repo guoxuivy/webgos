@@ -11,26 +11,29 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var (
+	MasterDB *gorm.DB   // 主库连接
+	SlaveDBs []*gorm.DB // 备库连接池
+)
 
 // InitDB 初始化数据库连接
-func InitDB() (*gorm.DB, error) {
+func InitDB() error {
 	dialector, err := dialector()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dialector: %w", err)
+		return fmt.Errorf("failed to create dialector: %w", err)
 	}
 
 	sqlDB, err := gorm.Open(dialector, &gorm.Config{
 		Logger: xlog.NewGormLogger(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect database: %w", err)
+		return fmt.Errorf("failed to connect database: %w", err)
 	}
 
 	// 设置连接池参数
 	sqlDBInstance, err := sqlDB.DB()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get database instance: %w", err)
+		return fmt.Errorf("failed to get database instance: %w", err)
 	}
 	dbConfig := config.GlobalConfig.Database
 	// 设置连接池参数
@@ -38,8 +41,8 @@ func InitDB() (*gorm.DB, error) {
 	sqlDBInstance.SetMaxIdleConns(dbConfig.MaxIdleConns)                                // 设置最大空闲连接数
 	sqlDBInstance.SetConnMaxLifetime(time.Duration(dbConfig.MaxLifetime) * time.Minute) // 设置连接的最大生命周期
 
-	DB = sqlDB
-	return DB, nil
+	MasterDB = sqlDB
+	return nil
 }
 
 func dialector() (gorm.Dialector, error) {
@@ -53,10 +56,14 @@ func dialector() (gorm.Dialector, error) {
 			dbConfig.Port, dbConfig.DBName)
 		dialector = mysql.Open(dsn)
 	case "postgres":
-		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
+		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=UTC",
 			dbConfig.Host, dbConfig.Port, dbConfig.Username,
 			dbConfig.Password, dbConfig.DBName)
-		dialector = postgres.Open(dsn)
+		// 1. 连接数据库（v1.6.0+ 驱动配置）
+		dialector = postgres.New(postgres.Config{
+			DSN:                  dsn,
+			PreferSimpleProtocol: true, // 依然需要启用文本协议
+		})
 	// case "sqlite":
 	// 	dialector = sqlite.Open(dbConfig.DBName)
 	// case "sqlserver":
@@ -71,15 +78,25 @@ func dialector() (gorm.Dialector, error) {
 }
 
 func CloseDB() {
-	if DB == nil {
+	if MasterDB == nil {
 		return
 	}
-	sqlDB, err := DB.DB()
+	sqlDB, err := MasterDB.DB()
 	if err != nil {
 		fmt.Println("Failed to get database instance:", err)
 		return
 	}
 	if err := sqlDB.Close(); err != nil {
 		fmt.Println("Failed to close database connection:", err)
+	}
+	for _, slaveDB := range SlaveDBs {
+		sqlDB, err = slaveDB.DB()
+		if err != nil {
+			fmt.Println("Failed to get database instance:", err)
+			continue
+		}
+		if err := sqlDB.Close(); err != nil {
+			fmt.Println("Failed to close slave database connection:", err)
+		}
 	}
 }

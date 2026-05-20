@@ -22,7 +22,7 @@ func Initialize(configPath string) error {
 	}
 
 	// 初始化数据库
-	if _, err = database.InitDB(); err != nil {
+	if err = database.InitDB(); err != nil {
 		return fmt.Errorf("Database initialization error: %v", err)
 	}
 
@@ -35,7 +35,7 @@ func Initialize(configPath string) error {
 	routes.New(globalConfig)
 
 	// 同步权限到数据库（根据配置决定是否收集）
-	if err := routes.SyncPermissions(database.DB); err != nil {
+	if err := routes.SyncPermissions(database.GetDB()); err != nil {
 		return fmt.Errorf("Failed to sync permissions: %v", err)
 	}
 

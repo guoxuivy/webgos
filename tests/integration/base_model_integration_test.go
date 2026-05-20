@@ -48,7 +48,7 @@ func setupTestDB() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect database: %w", err)
 	}
-	database.DB = sqlDB
+	database.MasterDB = sqlDB
 	return nil
 }
 
@@ -67,7 +67,7 @@ func generateTestUsername(prefix string) string {
 // TestBaseModelCRUDIntegration 测试 BaseModel 的实际 CRUD 操作
 func TestBaseModelCRUDIntegration(t *testing.T) {
 	// 检查数据库是否连接成功
-	if database.DB == nil {
+	if database.GetDB() == nil {
 		t.Skip("数据库未连接，跳过集成测试")
 	}
 
@@ -172,7 +172,7 @@ func TestBaseModelCRUDIntegration(t *testing.T) {
 // TestBaseModelQueryIntegration 测试 BaseModel 的查询操作
 func TestBaseModelQueryIntegration(t *testing.T) {
 	// 检查数据库是否连接成功
-	if database.DB == nil {
+	if database.GetDB() == nil {
 		t.Skip("数据库未连接，跳过集成测试")
 	}
 
@@ -271,7 +271,7 @@ func TestBaseModelQueryIntegration(t *testing.T) {
 // TestBaseModelChainableIntegration 测试 BaseModel 的链式查询方法
 func TestBaseModelChainableIntegration(t *testing.T) {
 	// 检查数据库是否连接成功
-	if database.DB == nil {
+	if database.GetDB() == nil {
 		t.Skip("数据库未连接，跳过集成测试")
 	}
 
@@ -296,7 +296,7 @@ func TestBaseModelChainableIntegration(t *testing.T) {
 // TestBaseModelTransactionIntegration 测试 BaseModel 的事务操作
 func TestBaseModelTransactionIntegration(t *testing.T) {
 	// 检查数据库是否连接成功
-	if database.DB == nil {
+	if database.GetDB() == nil {
 		t.Skip("数据库未连接，跳过集成测试")
 	}
 
@@ -409,7 +409,7 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 		testUsername := generateTestUsername("testuser_with_tx")
 
 		// 使用事务创建用户
-		err := database.DB.Transaction(func(tx *gorm.DB) error {
+		err := database.GetDB().Transaction(func(tx *gorm.DB) error {
 			// 使用 WithTx 方法创建绑定到事务的模型实例
 			txUserModel := userModel.WithTx(tx)
 
@@ -446,12 +446,12 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 		userModel := &models.BaseModel[models.User]{}
 
 		// 清理测试数据
-		defer database.DB.Where("username LIKE ?", "test_transaction_%").Delete(&models.User{})
+		defer database.GetDB().Where("username LIKE ?", "test_transaction_%").Delete(&models.User{})
 
 		t.Run("TestTransactionRespectsBoundTx", func(t *testing.T) {
 			t.Run("InnerFailureDoesNotAffectOuter", func(t *testing.T) {
 				// 测试场景1: 内层事务失败，外层事务可以选择继续（忽略内层错误）
-				outerErr := database.DB.Transaction(func(tx *gorm.DB) error {
+				outerErr := database.GetDB().Transaction(func(tx *gorm.DB) error {
 					// 创建测试用户
 					testUser := &models.User{
 						Username: "test_transaction_outer_continue",
@@ -494,8 +494,8 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 				// 检查数据库状态
 				var outerUserCount int64
 				var innerUserCount int64
-				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer_continue").Count(&outerUserCount)
-				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_inner_fail").Count(&innerUserCount)
+				database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_outer_continue").Count(&outerUserCount)
+				database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_inner_fail").Count(&innerUserCount)
 
 				// 验证结果
 				assert.Equal(t, int64(1), outerUserCount, "外层事务的用户应该被成功创建")
@@ -504,7 +504,7 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 
 			t.Run("InnerFailurePropagatesToOuter", func(t *testing.T) {
 				// 测试场景2: 内层事务失败，外层事务也应该回滚（传播错误）
-				outerErr := database.DB.Transaction(func(tx *gorm.DB) error {
+				outerErr := database.GetDB().Transaction(func(tx *gorm.DB) error {
 					// 创建测试用户
 					testUser := &models.User{
 						Username: "test_transaction_outer_rollback",
@@ -545,8 +545,8 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 				// 检查数据库状态 - 两个用户都应该被回滚
 				var outerUserCount int64
 				var innerUserCount int64
-				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer_rollback").Count(&outerUserCount)
-				database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_inner_propagate").Count(&innerUserCount)
+				database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_outer_rollback").Count(&outerUserCount)
+				database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_inner_propagate").Count(&innerUserCount)
 
 				// 验证结果
 				assert.Equal(t, int64(0), outerUserCount, "外层事务的用户应该被回滚")
@@ -572,13 +572,13 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 
 			// 验证用户创建成功
 			var userCount int64
-			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_direct").Count(&userCount)
+			database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_direct").Count(&userCount)
 			assert.Equal(t, int64(1), userCount, "直接使用Transaction方法应该成功创建用户")
 		})
 
 		t.Run("TestNestedTransactionProperRollback", func(t *testing.T) {
 			// 测试多层嵌套事务的回滚
-			outerErr := database.DB.Transaction(func(outerTx *gorm.DB) error {
+			outerErr := database.GetDB().Transaction(func(outerTx *gorm.DB) error {
 				// 外层创建用户1
 				user1 := &models.User{
 					Username: "test_transaction_outer1",
@@ -626,13 +626,13 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 
 			// 验证所有用户都被回滚
 			var user1Count int64
-			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer1").Count(&user1Count)
+			database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_outer1").Count(&user1Count)
 
 			var user2Count int64
-			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_middle2").Count(&user2Count)
+			database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_middle2").Count(&user2Count)
 
 			var user3Count int64
-			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_inner3").Count(&user3Count)
+			database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_inner3").Count(&user3Count)
 
 			assert.Equal(t, int64(0), user1Count, "外层用户应该被回滚")
 			assert.Equal(t, int64(0), user2Count, "中层用户应该被回滚")
@@ -641,7 +641,7 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 
 		t.Run("TestNestedTransactionPartialRollback", func(t *testing.T) {
 			// 测试部分嵌套事务回滚
-			outerErr := database.DB.Transaction(func(outerTx *gorm.DB) error {
+			outerErr := database.GetDB().Transaction(func(outerTx *gorm.DB) error {
 				// 外层创建用户1
 				user1 := &models.User{
 					Username: "test_transaction_outer4",
@@ -688,15 +688,15 @@ func TestBaseModelTransactionIntegration(t *testing.T) {
 
 			// 验证结果
 			var user1Count int64
-			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_outer4").Count(&user1Count)
+			database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_outer4").Count(&user1Count)
 			assert.Equal(t, int64(1), user1Count, "外层用户应该成功创建")
 
 			var user2Count int64
-			database.DB.Model(&models.User{}).Where("username = ?", "test_transaction_middle5").Count(&user2Count)
+			database.GetDB().Model(&models.User{}).Where("username = ?", "test_transaction_middle5").Count(&user2Count)
 			assert.Equal(t, int64(1), user2Count, "第一个中层用户应该成功创建")
 
 			var conflictCount int64
-			database.DB.Model(&models.User{}).Where("email = ?", "conflict@test.com").Count(&conflictCount)
+			database.GetDB().Model(&models.User{}).Where("email = ?", "conflict@test.com").Count(&conflictCount)
 			assert.Equal(t, int64(0), conflictCount, "冲突的用户应该被回滚")
 		})
 	})
