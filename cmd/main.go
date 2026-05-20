@@ -45,12 +45,19 @@ func main() {
 
 	// 创建 http.Server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", globalConfig.Server.Port),
-		Handler: routes.REngine,
+		Addr:              fmt.Sprintf(":%d", globalConfig.Server.Port),
+		Handler:           routes.REngine,
+		ReadTimeout:       30 * time.Second,  // 读取请求超时
+		WriteTimeout:      60 * time.Second,  // 写入响应超时
+		IdleTimeout:       120 * time.Second, // 连接空闲超时（keep-alive 连接保持时间）
+		ReadHeaderTimeout: 10 * time.Second,  // 读取请求头超时
+		MaxHeaderBytes:    1 << 20,           // 最大请求头大小（1MB）
 	}
 
 	// 按需开启Swagger文档
-	routes.REngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
+	if globalConfig.Server.Swag {
+		routes.REngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
+	}
 
 	quit := make(chan os.Signal, 1)
 	// kill -SIGINT 或 kill -SIGTERM 会触发优雅关闭 kill <pid> 或 kill -2 <pid>
