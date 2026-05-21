@@ -85,7 +85,7 @@ func (s *menuService) GetAllMenus() ([]models.Menu, error) {
 // GetMenuTree 获取菜单树（使用 BaseModel）
 func (s *menuService) GetMenuTree() ([]models.Menu, error) {
 	var menuModel models.Menu
-	menus, err := menuModel.More()
+	menus, err := menuModel.Order("`order` ASC").More()
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 		query = query.Where("id IN ?", menuIDs)
 	}
 
-	menus, err := query.More()
+	menus, err := query.Order("`order` ASC").More()
 	if err != nil {
 		return nil, err
 	}
