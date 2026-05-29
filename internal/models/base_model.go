@@ -298,11 +298,13 @@ type IWriter[T any] interface {
 	// 返回值: 创建过程中可能发生的错误
 	Create(item *T) error
 
-	// Update 更新一条对象记录
+	// Update 更新一条对象记录（不包含零值字段）
 	// 参数 item: 包含更新数据的记录对象
 	// 返回值: 更新过程中可能发生的错误
 	// 只会更新非零值字段，如果要更新全部字段，请使加上Select("*")
 	Update(item *T) error
+	// Updates 更新一条对象记录（包含零值字段）
+	Updates(item *T) error
 
 	// Delete 根据ID删除一条记录（软删除）
 	// 参数 id: 要删除记录的ID
@@ -553,9 +555,14 @@ func (c *BaseModel[T]) BatchCreate(items []T, batchSize int) error {
 	return c.getQuery().CreateInBatches(items, batchSize).Error
 }
 
-// Update 更新记录，仅更新非零值字段；如需覆盖全部字段请使用 Select("*")
+// Update 更新操作（不包含零值字段）
 func (c *BaseModel[T]) Update(item *T) error {
 	return c.getQuery().Updates(item).Error
+}
+
+// Updates 更新操作（包含零值字段）
+func (c *BaseModel[T]) Updates(item *T) error {
+	return c.getQuery().Select("*").Updates(item).Error
 }
 
 // UpdateColumns 更新指定字段
