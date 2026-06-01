@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 
-	"webgos/internal/xdb"
 	"webgos/internal/dto"
 	"webgos/internal/models"
+	"webgos/internal/xdb"
 
 	"gorm.io/gorm"
 )
@@ -34,9 +34,9 @@ func (s *departmentService) Create(dtoModel dto.AddDepartmentDTO) (*models.Depar
 		}
 	}
 
-	if dtoModel.LeaderID > 0 {
+	if dtoModel.LeaderID != nil && *dtoModel.LeaderID > 0 {
 		var leader models.User
-		if err := xdb.GetDB().First(&leader, dtoModel.LeaderID).Error; err != nil {
+		if err := xdb.GetDB().First(&leader, *dtoModel.LeaderID).Error; err != nil {
 			return nil, errors.New("负责人不存在")
 		}
 	}
@@ -80,7 +80,7 @@ func (s *departmentService) Update(dtoModel dto.EditDepartmentDTO) error {
 		department.ParentID = *dtoModel.ParentID
 	}
 	if dtoModel.LeaderID != nil {
-		department.LeaderID = *dtoModel.LeaderID
+		department.LeaderID = dtoModel.LeaderID
 	}
 	if dtoModel.Remark != nil {
 		department.Remark = *dtoModel.Remark
@@ -129,28 +129,19 @@ func (s *departmentService) GetTree() ([]models.Department, error) {
 		return nil, err
 	}
 
-	return buildDepartmentTree(departments), nil
+	return buildDepartmentTree(departments, 0), nil
 }
 
-func buildDepartmentTree(departments []models.Department) []models.Department {
-	departmentMap := make(map[int]*models.Department)
-	var rootDepartments []models.Department
-
+func buildDepartmentTree(departments []models.Department, parentID int) []models.Department {
+	var tree []models.Department
 	for i := range departments {
-		departmentMap[departments[i].ID] = &departments[i]
-	}
-
-	for _, dept := range departments {
-		if dept.ParentID == 0 {
-			rootDepartments = append(rootDepartments, dept)
-		} else {
-			if parent, ok := departmentMap[dept.ParentID]; ok {
-				parent.Children = append(parent.Children, dept)
-			}
+		if departments[i].ParentID == parentID {
+			children := buildDepartmentTree(departments, departments[i].ID)
+			departments[i].Children = children
+			tree = append(tree, departments[i])
 		}
 	}
-
-	return rootDepartments
+	return tree
 }
 
 func (s *departmentService) GetUsers(departmentID int, page, pageSize int) ([]models.User, int64, error) {

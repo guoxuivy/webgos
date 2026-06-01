@@ -4,7 +4,7 @@ type Department struct {
 	BaseFields
 	Name     string       `gorm:"size:50;unique;not null" json:"name"`
 	ParentID int          `gorm:"column:parent_id;default:0" json:"parent_id"`
-	LeaderID int          `gorm:"column:leader_id;default:0" json:"leader_id"`
+	LeaderID *int         `gorm:"column:leader_id" json:"leader_id,omitempty"`
 	Remark   string       `gorm:"size:200" json:"remark"`
 	Status   int          `gorm:"type:tinyint;default:1" json:"status"`
 	Sort     int          `gorm:"column:sort;default:0" json:"sort"`
