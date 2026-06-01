@@ -2,7 +2,7 @@
 server:
   mode: "debug" # 可选值: debug, release
   port: 8080
-  swag: false
+  swag: true
 
 # 数据库配置
 database:

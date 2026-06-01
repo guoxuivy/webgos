@@ -38,5 +38,6 @@ func migrate() error {
 		&models.RBACPermission{},
 		&models.RBACUserRole{},
 		&models.RBACRolePermission{},
-		&models.Menu{})
+		&models.Menu{},
+		&models.Department{})
 }
