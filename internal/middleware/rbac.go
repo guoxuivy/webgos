@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 	"webgos/internal/config"
-	"webgos/internal/database"
+	"webgos/internal/xdb"
 	"webgos/internal/models"
 	"webgos/internal/utils/response"
 
@@ -38,7 +38,7 @@ func RBAC() gin.HandlerFunc {
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User
-			if err := database.GetDB().Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
+			if err := xdb.GetDB().Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
 				response.AuthError(c, "用户不存在")
 				return
 			}

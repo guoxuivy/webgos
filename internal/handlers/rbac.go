@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"webgos/internal/dto"
-	"webgos/internal/models"
 	"webgos/internal/services"
 	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
@@ -10,16 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AddRole 创建角色
 // @Summary 创建角色
 // @Description 创建新角色
-// @Tags RBAC
+// @Tags 角色权限
 // @Accept json
 // @Produce json
-// @Param data body dto.AddRoleDTO true "角色参数"
+// @Param body body dto.AddRoleDTO true "角色信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/add/role [post]
-// AddRole 创建角色
+// @Router /api/rbac/role [post]
 // @Security BearerAuth
 func AddRole(c *gin.Context) {
 	var dtoModel dto.AddRoleDTO
@@ -29,39 +28,26 @@ func AddRole(c *gin.Context) {
 		return
 	}
 
-	role := &models.RBACRole{
-		Name:   dtoModel.Name,
-		Remark: dtoModel.Remark,
-		Status: dtoModel.Status,
+	rbacService := services.NewRBACService()
+	role, err := rbacService.AddRole(dtoModel)
+	if err != nil {
+		response.Error(c, "创建角色失败: "+err.Error())
+		return
 	}
-	role.SetMenuIDs(dtoModel.Menus)
-	role.Create(role)
-
-	// // 创建角色服务
-	// rbacService := services.NewRBACService()
-	// role, err := rbacService.CreateRole(dtoModel.Name, dtoModel.Remark, dtoModel.Menus)
-	// if err != nil {
-	// 	response.Error(c, "创建角色失败: "+err.Error())
-	// 	return
-	// }
-
-	// // 更新角色状态
-	// role.Status = dtoModel.Status
-	// database.DB.Save(role)
 
 	response.Success(c, "角色创建成功", role)
 }
 
+// EditRole 编辑角色
 // @Summary 编辑角色
-// @Description 编辑角色信息
-// @Tags RBAC
+// @Description 更新角色信息
+// @Tags 角色权限
 // @Accept json
 // @Produce json
-// @Param data body dto.EditRoleDTO true "编辑参数"
+// @Param body body dto.EditRoleDTO true "角色信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/edit_role [post]
-// EditRole 编辑角色
 // @Security BearerAuth
 func EditRole(c *gin.Context) {
 	var dtoModel dto.EditRoleDTO
@@ -70,47 +56,25 @@ func EditRole(c *gin.Context) {
 		return
 	}
 
-	role := &models.RBACRole{}
-	role, err := role.Read(dtoModel.ID)
+	rbacService := services.NewRBACService()
+	err := rbacService.EditRole(dtoModel)
 	if err != nil {
-		response.Error(c, "角色不存在: "+err.Error())
-		return
-	}
-
-	// xlog.Debug("%#v", dtoModel)
-
-	if dtoModel.Menus != nil {
-		role.SetMenuIDs(dtoModel.Menus)
-	}
-	// 只更新提供了值的字段
-	if dtoModel.Name != nil {
-		role.Name = *dtoModel.Name
-	}
-	if dtoModel.Remark != nil {
-		role.Remark = *dtoModel.Remark
-	}
-	if dtoModel.Status != nil {
-		role.Status = *dtoModel.Status
-	}
-
-	err = role.Select("*").Update(role)
-	if err != nil {
-		response.Error(c, "更新角色失败: "+err.Error())
+		response.Error(c, "编辑角色失败: "+err.Error())
 		return
 	}
 	response.Success(c, "编辑角色成功", nil)
 }
 
+// AssignRoles 分配角色
 // @Summary 分配角色给用户
 // @Description 给用户分配角色
-// @Tags RBAC
+// @Tags 角色权限
 // @Accept json
 // @Produce json
-// @Param data body dto.AssignRolesDTO true "分配参数"
+// @Param body body dto.AssignRolesDTO true "角色分配信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/assign_roles [post]
-// AssignRoles 分配角色给用户
 // @Security BearerAuth
 func AssignRoles(c *gin.Context) {
 	var dtoModel dto.AssignRolesDTO
@@ -120,7 +84,6 @@ func AssignRoles(c *gin.Context) {
 		return
 	}
 
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	err := rbacService.AssignRolesToUser(dtoModel.UserID, dtoModel.RoleIDs)
 	if err != nil {
@@ -131,16 +94,16 @@ func AssignRoles(c *gin.Context) {
 	response.Success(c, "角色分配成功", nil)
 }
 
+// AssignPermissions 分配权限
 // @Summary 分配权限给角色
 // @Description 给角色分配权限
-// @Tags RBAC
+// @Tags 角色权限
 // @Accept json
 // @Produce json
-// @Param data body dto.AssignPermissionsDTO true "分配参数"
+// @Param body body dto.AssignPermissionsDTO true "权限分配信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/assign_permissions [post]
-// AssignPermissions 分配权限给角色
 // @Security BearerAuth
 func AssignPermissions(c *gin.Context) {
 	var dtoModel dto.AssignPermissionsDTO
@@ -150,7 +113,6 @@ func AssignPermissions(c *gin.Context) {
 		return
 	}
 
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	err := rbacService.AssignPermissionsToRole(dtoModel.RoleID, dtoModel.PermissionIDs)
 	if err != nil {
@@ -161,15 +123,16 @@ func AssignPermissions(c *gin.Context) {
 	response.Success(c, "权限分配成功", nil)
 }
 
+// GetRoleByID 获取角色详情
 // @Summary 获取角色详情
-// @Description 获取指定角色详情
-// @Tags RBAC
+// @Description 根据ID获取角色详情
+// @Tags 角色权限
+// @Accept json
 // @Produce json
-// @Param id path int true "角色ID"
+// @Param body body dto.GetRoleDTO true "查询参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/role/:id [get]
-// GetRoleByID 根据ID获取角色
+// @Router /api/rbac/role/{id} [get]
 // @Security BearerAuth
 func GetRoleByID(c *gin.Context) {
 	var dtoModel dto.GetRoleDTO
@@ -179,7 +142,6 @@ func GetRoleByID(c *gin.Context) {
 		return
 	}
 
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	role, err := rbacService.GetRoleByID(dtoModel.ID)
 	if err != nil {
@@ -190,15 +152,16 @@ func GetRoleByID(c *gin.Context) {
 	response.Success(c, "获取角色成功", role)
 }
 
-// @Summary 获取用户角色
+// GetUserRoles 获取用户角色
+// @Summary 获取用户的角色列表
 // @Description 获取指定用户的角色列表
-// @Tags RBAC
+// @Tags 角色权限
+// @Accept json
 // @Produce json
-// @Param id path int true "用户ID"
-// @Success 200 {array} models.RBACRole
+// @Param body body dto.GetUserRolesDTO true "查询参数"
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/user_roles/:id [get]
-// GetUserRoles 获取用户的角色
+// @Router /api/rbac/user_roles/{id} [get]
 // @Security BearerAuth
 func GetUserRoles(c *gin.Context) {
 	var dtoModel dto.GetUserRolesDTO
@@ -208,7 +171,6 @@ func GetUserRoles(c *gin.Context) {
 		return
 	}
 
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	roles, err := rbacService.GetUserRoles(dtoModel.UserID)
 	if err != nil {
@@ -219,17 +181,17 @@ func GetUserRoles(c *gin.Context) {
 	response.Success(c, "获取用户角色成功", roles)
 }
 
+// GetRoles 获取角色列表
 // @Summary 获取角色列表
 // @Description 获取所有角色列表
-// @Tags RBAC
+// @Tags 角色权限
+// @Accept json
 // @Produce json
-// @Success 200 {array} models.RBACRole
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/roles [get]
 // @Security BearerAuth
-// GetRoles 获取角色列表
 func GetRoles(c *gin.Context) {
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	roles, err := rbacService.GetRoles()
 	if err != nil {
@@ -240,17 +202,17 @@ func GetRoles(c *gin.Context) {
 	response.Success(c, "获取角色列表成功", gin.H{"items": roles, "total": len(roles)})
 }
 
-// @Summary 获取权限项列表
-// @Description 获取所有权限项列表
-// @Tags RBAC
+// GetPermissions 获取权限列表
+// @Summary 获取权限列表
+// @Description 获取所有权限列表
+// @Tags 角色权限
+// @Accept json
 // @Produce json
-// @Success 200 {array} models.RBACPermission
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/rbac/permissions [get]
 // @Security BearerAuth
-// GetPermissions 获取权限项列表
 func GetPermissions(c *gin.Context) {
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	permissions, err := rbacService.GetPermissions()
 	if err != nil {
@@ -260,23 +222,23 @@ func GetPermissions(c *gin.Context) {
 	response.Success(c, "获取权限项列表成功", permissions)
 }
 
-// @Summary 删除权限点
-// @Description 根据ID删除权限点
-// @Tags RBAC
+// DeletePermission 删除权限
+// @Summary 删除权限
+// @Description 删除指定权限
+// @Tags 角色权限
+// @Accept json
 // @Produce json
 // @Param id path int true "权限ID"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/permission/:id [delete]
+// @Router /api/rbac/permission/{id} [delete]
 // @Security BearerAuth
-// DeletePermission 删除权限点
 func DeletePermission(c *gin.Context) {
 	var dtoModel dto.DeletePermissionDTO
 	if err := param.ValidateUri(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	err := rbacService.DeletePermission(dtoModel.ID)
 	if err != nil {
@@ -286,16 +248,17 @@ func DeletePermission(c *gin.Context) {
 	response.Success(c, "删除权限成功", nil)
 }
 
-// @Summary 获取角色权限列表
-// @Description 获取指定角色的所有权限列表
-// @Tags RBAC
+// GetRolePermissions 获取角色权限
+// @Summary 获取角色的权限列表
+// @Description 获取指定角色的权限列表
+// @Tags 角色权限
+// @Accept json
 // @Produce json
-// @Param id path int true "角色ID"
-// @Success 200 {array} models.RBACPermission
+// @Param body body dto.GetRolePermissionsDTO true "查询参数"
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/role_permissions/:id [get]
+// @Router /api/rbac/role_permissions/{id} [get]
 // @Security BearerAuth
-// GetRolePermissions 获取角色权限列表
 func GetRolePermissions(c *gin.Context) {
 	var dtoModel dto.GetRolePermissionsDTO
 
@@ -304,7 +267,6 @@ func GetRolePermissions(c *gin.Context) {
 		return
 	}
 
-	// 创建角色服务
 	rbacService := services.NewRBACService()
 	permissions, err := rbacService.GetRolePermissions(dtoModel.RoleID)
 	if err != nil {

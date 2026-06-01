@@ -35,7 +35,7 @@ description: "自动创建完整的后端API接口，采用接口化设计模式
 ### 1. 模型文件 (internal/models/)
 ```go
 type EntityName struct {
-    BaseModel[EntityName]
+    BaseFields
     // 字段定义 - 命名尽量简化，JSON标签使用小驼峰
     Name     string `gorm:"size:100;not null;comment:名称" json:"name"`
     Code     string `gorm:"size:50;unique;comment:编码" json:"code"`
@@ -75,11 +75,11 @@ func (dto *EntityName) ToModel() *models.EntityName {
     if dto.ID == 0 {
         model = &models.EntityName{}
     } else {
-        one, err := new(models.EntityName).Read(dto.ID)
-        if err != nil {
+        var existing models.EntityName
+        if err := database.MasterDB.First(&existing, dto.ID).Error; err != nil {
             return nil
         }
-        model = one
+        model = &existing
     }
 
     if dto.Name != nil {
@@ -101,6 +101,7 @@ func (dto *EntityName) ToModel() *models.EntityName {
 ```go
 import (
     "context"
+    "cyp/internal/database"
     "cyp/internal/dto"
     "cyp/internal/models"
 )
@@ -134,17 +135,17 @@ func (s *entityNameService) SaveEntity(ctx context.Context, entity *models.Entit
     }
     
     if entity.ID > 0 {
-        return entity.Update(entity)
+        return database.MasterDB.Select("*").Updates(entity).Error
     }
     
     // 创建逻辑
-    return entity.Create(entity)
+    return database.MasterDB.Create(entity).Error
 }
 
 // GetEntityByID 根据ID获取实体详情
 func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.EntityName, error) {
-    var entityModel models.EntityName
-    entity, err := entityModel.Read(id)
+    var entity models.EntityName
+    err := database.MasterDB.First(&entity, id).Error
     if err != nil {
         return nil, err
     }
@@ -154,24 +155,29 @@ func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.
         return nil, err
     }
     
-    return entity, nil
+    return &entity, nil
 }
 
 // GetEntityPage 分页查询实体列表
 func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int) {
-    var model models.EntityName
-    queryHandle := model.Where("")
+    db := database.MasterDB.Model(&models.EntityName{})
 
     // 构建查询条件
     if query.Name != nil {
-        queryHandle = queryHandle.Where("name LIKE ?", "%"+*query.Name+"%")
+        db = db.Where("name LIKE ?", "%"+*query.Name+"%")
     }
     if query.Status != nil {
-        queryHandle = queryHandle.Where("status = ?", *query.Status)
+        db = db.Where("status = ?", *query.Status)
     }
 
-    entities, total, err := queryHandle.Page(query.Page, query.PageSize)
-    if err != nil {
+    var total int64
+    if err := db.Count(&total).Error; err != nil {
+        return []models.EntityName{}, 0
+    }
+
+    var entities []models.EntityName
+    offset := (query.Page - 1) * query.PageSize
+    if err := db.Offset(offset).Limit(query.PageSize).Find(&entities).Error; err != nil {
         return []models.EntityName{}, 0
     }
     
@@ -182,13 +188,12 @@ func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityN
         }
     }
     
-    return entities, total
+    return entities, int(total)
 }
 
 // DeleteEntity 删除实体
 func (s *entityNameService) DeleteEntity(ctx context.Context, id int) error {
-    var entity models.EntityName
-    return entity.Delete(id)
+    return database.MasterDB.Delete(&models.EntityName{}, id).Error
 }
 ```
 
@@ -336,6 +341,7 @@ func init() {
 - **路由注册**：使用`init()`函数和`WrapRouter`进行路由注册
 - **中间件**：默认添加JWT认证中间件
 - **Context 传递**：服务层方法统一接收 `context.Context` 参数
+- **GORM原生操作**：直接使用`database.MasterDB`进行数据库操作，不再使用BaseModel封装
 
 ### 服务层规范
 - **接口化设计**：定义接口 + 实现结构体
@@ -347,6 +353,7 @@ func init() {
   - `GetEntityByID(ctx context.Context, id int) (*models.EntityName, error)` - 获取详情
   - `GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int)` - 分页查询
   - `DeleteEntity(ctx context.Context, id int) error` - 删除操作
+- **数据库操作**：直接使用`database.MasterDB`进行GORM原生操作
 
 ### 处理器层规范
 - **统一编辑接口**：使用`EntityNameEdit`方法统一处理创建和更新
@@ -356,7 +363,8 @@ func init() {
 - **Context 传递**：调用服务方法时直接传递 `c *gin.Context`（`gin.Context` 实现了 `context.Context` 接口）
 
 ### 模型层规范
-- **ID字段类型**：所有与ID相关的参数必须使用`int`类型，与BaseModel保持一致
+- **BaseFields嵌入**：模型通过嵌入`BaseFields`结构体获得ID、CreatedAt、UpdatedAt、DeletedAt字段
+- **ID字段类型**：所有与ID相关的参数必须使用`int`类型
 - **字段命名简化**：避免冗余和过长的名称
 - **JSON字段名**：使用小驼峰命名法，如：`landType`、`isActive`
 - **复杂类型存储**：复杂字段使用JSONB存储，配合序列化方法
@@ -365,7 +373,7 @@ func init() {
 - **统一DTO设计**：使用单个DTO结构体同时支持创建和更新操作
 - **指针类型字段**：所有字段使用指针类型支持部分更新
 - **验证标签**：使用`validate`标签进行参数验证，包含`label`标签用于错误消息
-- **转换方法**：实现`ToModel()`方法进行DTO到模型的转换
+- **转换方法**：实现`ToModel()`方法进行DTO到模型的转换，使用GORM原生查询获取现有记录
 - **查询DTO**：查询参数使用指针类型支持可选参数
 
 ### 序列化规范
@@ -376,10 +384,10 @@ func init() {
 - **避免钩子**：不依赖GORM钩子，采用明确的手动调用方式
 
 ### 查询构建规范
-- **链式查询**：使用`Where("")`开始查询构建
+- **链式查询**：使用GORM的链式查询构建器
 - **条件判断**：使用指针类型判断参数是否存在
 - **模糊查询**：字符串字段使用`LIKE`进行模糊匹配
-- **分页处理**：使用`Page()`方法进行分页查询
+- **分页处理**：手动计算offset，使用`Offset()`和`Limit()`方法进行分页查询
 
 ## 重要优化点
 
@@ -392,6 +400,7 @@ func init() {
 - **链式构建**：使用GORM的链式查询构建器
 - **条件过滤**：通过指针判断是否添加查询条件
 - **灵活查询**：支持精确查询和模糊查询
+- **GORM原生**：直接使用`database.MasterDB`进行查询
 
 ### 3. 错误处理优化
 - **统一格式**：使用`response.Error()`和`response.Success()`
@@ -407,6 +416,12 @@ func init() {
 - **统一传递**：所有服务方法接收 `context.Context` 参数
 - **请求上下文**：支持传递请求级别的数据和超时控制
 - **接口兼容**：`gin.Context` 实现了 `context.Context` 接口，可直接传递
+
+### 6. 模型层重构优化
+- **移除BaseModel**：不再继承BaseModel泛型基类
+- **BaseFields嵌入**：使用`BaseFields`结构体嵌入获得基础字段
+- **GORM原生操作**：服务层直接使用`database.MasterDB`进行数据库操作
+- **简化设计**：降低代码复杂度，提高可维护性
 
 ## 示例用法
 

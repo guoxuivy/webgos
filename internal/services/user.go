@@ -5,26 +5,23 @@ import (
 
 	"webgos/internal/dto"
 	"webgos/internal/models"
+	"webgos/internal/xdb"
 )
 
-// UserService 用户服务接口
 type UserService interface {
 	CreateOrUpdateUser(user *models.User) error
 	ResetPassword(username, password string) error
-	UsersPage(query dto.UserQuery) ([]models.User, int)
+	UsersPage(query dto.UserQuery) ([]models.User, int64)
+	GetUserInfo(userID int) (*models.User, error)
 }
 
-// userService 实现 UserService 接口
 type userService struct{}
 
-// NewUserService 创建用户服务实例
 func NewUserService() UserService {
 	return &userService{}
 }
 
-// CreateUser 创建更新用户
 func (s *userService) CreateOrUpdateUser(user *models.User) error {
-	// 密码加密
 	if user.Password != "" {
 		if err := user.SetPassword(user.Password); err != nil {
 			return err
@@ -32,46 +29,48 @@ func (s *userService) CreateOrUpdateUser(user *models.User) error {
 	}
 
 	if user.ID > 0 {
-		// 更新用户（使用 BaseModel）
-		return user.Update(user)
+		return xdb.GetDB().Updates(user).Error
 	}
 
-	// 创建用户（使用 BaseModel）
-	return user.Create(user)
+	return xdb.GetDB().Create(user).Error
 }
 
-// ResetPassword 重置用户密码
 func (s *userService) ResetPassword(username, password string) error {
-	var userModel models.User
+	var user models.User
 
-	// 根据用户名查找用户（使用 BaseModel）
-	user, err := userModel.Where("username = ?", username).One()
-	if err != nil {
+	if err := xdb.GetDB().Where("username = ?", username).Take(&user).Error; err != nil {
 		return errors.New("用户不存在")
 	}
 
-	// 设置新密码
 	if err := user.SetPassword(password); err != nil {
 		return err
 	}
 
-	// 只更新密码字段（使用 BaseModel UpdateColumns）
-	return user.UpdateColumns(map[string]any{"Password": user.Password})
+	return xdb.GetDB().Model(&user).Update("Password", user.Password).Error
 }
 
-// UsersPage 获取用户列表
-func (s *userService) UsersPage(query dto.UserQuery) ([]models.User, int) {
-	var model models.User
+func (s *userService) UsersPage(query dto.UserQuery) ([]models.User, int64) {
+	var users []models.User
+	var total int64
+
+	db := xdb.GetDB().Model(&models.User{})
 
 	if query.Username != "" {
-		queryHandle := model.Where("username LIKE ?", "%"+query.Username+"%")
-		model = *queryHandle.(*models.User)
+		db = db.Where("username LIKE ?", "%"+query.Username+"%")
 	}
 
-	users, total, err := model.Preload("Roles").Page(query.Page, query.PageSize)
-	if err != nil {
-		// 如果出现错误，返回空列表和0总数
+	if err := db.Count(&total).Error; err != nil {
+		return []models.User{}, 0
+	}
+	db = db.Scopes(models.Page(query.Page, query.PageSize))
+	if err := db.Preload("Roles").Find(&users).Error; err != nil {
 		return []models.User{}, 0
 	}
 	return users, total
+}
+
+func (s *userService) GetUserInfo(userID int) (*models.User, error) {
+	var user models.User
+	err := xdb.GetDB().Preload("Roles").First(&user, userID).Error
+	return &user, err
 }

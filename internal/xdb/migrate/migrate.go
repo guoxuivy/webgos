@@ -2,7 +2,7 @@ package migrate
 
 import (
 	"webgos/internal/config"
-	"webgos/internal/database"
+	"webgos/internal/xdb"
 	"webgos/internal/models"
 	"webgos/internal/xlog"
 )
@@ -30,7 +30,7 @@ func migrate() error {
 	// }
 
 	// 执行自动迁移
-	return database.GetDB().AutoMigrate(
+	return xdb.GetDB().AutoMigrate(
 		&models.Product{},
 		&models.InventoryRecord{},
 		&models.User{},

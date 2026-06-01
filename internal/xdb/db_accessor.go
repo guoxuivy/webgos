@@ -1,4 +1,4 @@
-package database
+package xdb
 
 import (
 	"math/rand"
@@ -15,12 +15,12 @@ var (
 
 // GetDB 获取主库连接（写操作）
 func GetDB() *gorm.DB {
-	return MasterDB
+	return masterDB
 }
 
 // GetSlaveDB 获取备库连接（读操作）
 func GetSlaveDB() *gorm.DB {
-	if !config.GlobalConfig.Database.ReadWriteSeparation || len(SlaveDBs) == 0 {
+	if !config.GlobalConfig.Database.ReadWriteSeparation || len(slaveDBs) == 0 {
 		return nil
 	}
 	switch config.GlobalConfig.Database.SlaveLoadBalance {
@@ -37,15 +37,15 @@ func getRandomSlave() *gorm.DB {
 	slaveLock.Lock()
 	defer slaveLock.Unlock()
 
-	index := rand.Intn(len(SlaveDBs))
-	return SlaveDBs[index]
+	index := rand.Intn(len(slaveDBs))
+	return slaveDBs[index]
 }
 
 func getRoundRobinSlave() *gorm.DB {
 	slaveLock.Lock()
 	defer slaveLock.Unlock()
 
-	slave := SlaveDBs[slaveIndex]
-	slaveIndex = (slaveIndex + 1) % len(SlaveDBs)
+	slave := slaveDBs[slaveIndex]
+	slaveIndex = (slaveIndex + 1) % len(slaveDBs)
 	return slave
 }

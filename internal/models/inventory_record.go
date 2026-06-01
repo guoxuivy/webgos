@@ -1,9 +1,8 @@
 package models
 
-// InventoryRecord 进销存记录模型
 type InventoryRecord struct {
-	BaseModel[InventoryRecord]
+	BaseFields
 	ProductID int
 	Quantity  int
-	Type      string // "in" 或 "out"
+	Type      string
 }

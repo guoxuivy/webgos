@@ -4,9 +4,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// User 用户模型
 type User struct {
-	BaseModel[User]
+	BaseFields
 	Username string     `gorm:"unique" json:"username"`
 	Nickname string     `json:"nickname"`
 	Email    string     `json:"email"`
@@ -14,11 +13,10 @@ type User struct {
 	Password string     `json:"-"`
 	Gender   string     `json:"gender"`
 	Age      int        `json:"age"`
-	Status   int        `gorm:"default:1" json:"status"` // 0: 禁用, 1: 启用
+	Status   int        `gorm:"default:1" json:"status"`
 	Roles    []RBACRole `gorm:"many2many:rbac_user_roles;" json:"roles"`
 }
 
-// SetPassword 设置用户密码（加密）
 func (u *User) SetPassword(password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -28,7 +26,6 @@ func (u *User) SetPassword(password string) error {
 	return nil
 }
 
-// CheckPassword 验证用户密码
 func (u *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	return err == nil

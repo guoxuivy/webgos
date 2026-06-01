@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"fmt"
 	"webgos/internal/config"
-	"webgos/internal/database"
-	"webgos/internal/database/migrate"
+	"webgos/internal/xdb"
+	"webgos/internal/xdb/migrate"
 	"webgos/internal/routes"
 	"webgos/internal/xlog"
 )
@@ -22,7 +22,7 @@ func Initialize(configPath string) error {
 	}
 
 	// 初始化数据库
-	if err = database.InitDB(); err != nil {
+	if err = xdb.InitDB(); err != nil {
 		return fmt.Errorf("Database initialization error: %v", err)
 	}
 
@@ -35,7 +35,7 @@ func Initialize(configPath string) error {
 	routes.New(globalConfig)
 
 	// 同步权限到数据库（根据配置决定是否收集）
-	if err := routes.SyncPermissions(database.GetDB()); err != nil {
+	if err := routes.SyncPermissions(xdb.GetDB()); err != nil {
 		return fmt.Errorf("Failed to sync permissions: %v", err)
 	}
 
@@ -44,7 +44,7 @@ func Initialize(configPath string) error {
 
 func Close() {
 	xlog.Access("Closing resources...")
-	database.CloseDB()
+	xdb.CloseDB()
 	if xlog.Xlogger != nil {
 		xlog.Xlogger.Close()
 	}

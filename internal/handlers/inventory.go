@@ -8,12 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ProductIn 产品入库
 // @Summary 产品入库
 // @Description 产品入库操作
 // @Tags 库存
 // @Accept json
 // @Produce json
-// @Param data body models.InventoryRecord true "入库参数"
+// @Param body body models.InventoryRecord true "入库参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/inventory/in [post]
@@ -26,15 +27,6 @@ func ProductIn(c *gin.Context) {
 		return
 	}
 
-	// 验证必需字段
-	if record.ProductID == 0 || record.Quantity <= 0 {
-		response.Error(c, "产品ID和数量必须大于0")
-		return
-	}
-
-	// 强制设置类型为"in"
-	record.Type = "in"
-
 	inventoryService := services.NewInventoryService()
 	if err := inventoryService.ProductIn(&record); err != nil {
 		response.Error(c, err.Error())
@@ -44,12 +36,13 @@ func ProductIn(c *gin.Context) {
 	response.Success(c, "产品入库成功", nil)
 }
 
+// ProductOut 产品出库
 // @Summary 产品出库
 // @Description 产品出库操作
 // @Tags 库存
 // @Accept json
 // @Produce json
-// @Param data body models.InventoryRecord true "出库参数"
+// @Param body body models.InventoryRecord true "出库参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/inventory/out [post]
@@ -61,15 +54,6 @@ func ProductOut(c *gin.Context) {
 		response.Error(c, err.Error())
 		return
 	}
-
-	// 验证必需字段
-	if record.ProductID == 0 || record.Quantity <= 0 {
-		response.Error(c, "产品ID和数量必须大于0")
-		return
-	}
-
-	// 强制设置类型为"out"
-	record.Type = "out"
 
 	inventoryService := services.NewInventoryService()
 	if err := inventoryService.ProductOut(&record); err != nil {

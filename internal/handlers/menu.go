@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"webgos/common/convert"
 	"webgos/internal/dto"
-	"webgos/internal/models"
 	"webgos/internal/services"
 	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
@@ -12,16 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AddMenu 创建菜单
 // @Summary 创建菜单
 // @Description 创建新菜单
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
-// @Param data body dto.MenuDTO true "菜单参数"
+// @Param body body dto.MenuDTO true "菜单参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/menu [post]
-// AddMenu 创建菜单
 // @Security BearerAuth
 func AddMenu(c *gin.Context) {
 	var dtoModel dto.MenuDTO
@@ -31,38 +30,9 @@ func AddMenu(c *gin.Context) {
 		return
 	}
 
-	// 创建菜单服务
 	menuService := services.NewMenuService()
-
-	// 构造菜单模型
-	menu := &models.Menu{
-		Name:      dtoModel.Name,
-		Path:      dtoModel.Path,
-		AuthCode:  dtoModel.AuthCode,
-		Component: dtoModel.Component,
-		Type:      dtoModel.Type,
-		Status:    dtoModel.Status,
-		Pid:       dtoModel.Pid,
-		Meta: models.MenuMeta{
-			Title:              dtoModel.Meta.Title,
-			Icon:               dtoModel.Meta.Icon,
-			AffixTab:           dtoModel.Meta.AffixTab,
-			HideChildrenInMenu: dtoModel.Meta.HideChildrenInMenu,
-			HideInBreadcrumb:   dtoModel.Meta.HideInBreadcrumb,
-			HideInMenu:         dtoModel.Meta.HideInMenu,
-			HideInTab:          dtoModel.Meta.HideInTab,
-			KeepAlive:          dtoModel.Meta.KeepAlive,
-			Order:              dtoModel.Meta.Order,
-			Badge:              dtoModel.Meta.Badge,
-			BadgeType:          dtoModel.Meta.BadgeType,
-			BadgeVariants:      dtoModel.Meta.BadgeVariants,
-			IframeSrc:          dtoModel.Meta.IframeSrc,
-			Link:               dtoModel.Meta.Link,
-		},
-	}
-
-	// 创建菜单
-	if err := menuService.CreateMenu(menu); err != nil {
+	menu, err := menuService.AddMenu(dtoModel)
+	if err != nil {
 		response.Error(c, "创建菜单失败: "+err.Error())
 		return
 	}
@@ -70,23 +40,22 @@ func AddMenu(c *gin.Context) {
 	response.Success(c, "菜单创建成功", menu)
 }
 
+// EditMenu 编辑菜单
 // @Summary 编辑菜单
 // @Description 编辑菜单信息
 // @Tags 菜单管理
 // @Accept json
 // @Produce json
 // @Param id path int true "菜单ID"
-// @Param data body dto.MenuDTO true "菜单参数"
+// @Param body body dto.MenuDTO true "菜单参数"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/menu/:id [put]
-// EditMenu 编辑菜单
+// @Router /api/menu/{id} [put]
 // @Security BearerAuth
 func EditMenu(c *gin.Context) {
 	var uri struct {
 		ID int `uri:"id" binding:"required,min=1"`
 	}
-	// 绑定路径参数
 	if err := c.ShouldBindUri(&uri); err != nil {
 		response.Error(c, "无效的菜单ID: "+err.Error())
 		return
@@ -98,26 +67,8 @@ func EditMenu(c *gin.Context) {
 		return
 	}
 
-	// 创建菜单服务
 	menuService := services.NewMenuService()
-
-	menu := &models.Menu{}
-	menu, err := menu.Read(uri.ID)
-	if err != nil {
-		response.Error(c, "菜单不存在: "+err.Error())
-		return
-	}
-	menu.Name = dtoModel.Name
-	menu.Path = dtoModel.Path
-	menu.AuthCode = dtoModel.AuthCode
-	menu.Component = dtoModel.Component
-	menu.Type = dtoModel.Type
-	menu.Status = dtoModel.Status
-	menu.Pid = dtoModel.Pid
-	menu.Meta = dtoModel.Meta
-
-	// 更新菜单
-	if err := menuService.UpdateMenu(uri.ID, menu); err != nil {
+	if err := menuService.EditMenu(uri.ID, dtoModel); err != nil {
 		response.Error(c, "编辑菜单失败: "+err.Error())
 		return
 	}
@@ -296,13 +247,11 @@ func PathExists(c *gin.Context) {
 	id := c.Query("id")
 	if id != "" {
 		// 转换ID为整数
-		var menuID int
-		_, err := fmt.Sscanf(id, "%d", &menuID)
-		if err != nil {
-			response.Error(c, "菜单ID格式错误")
+		menuID := convert.S2Int(id)
+		if menuID == 0 {
+			response.Error(c, "菜单ID错误")
 			return
 		}
-
 		// 检查路径是否存在（排除指定ID）
 		exists, _ = menuService.IsPathExists(path, menuID)
 	} else {
@@ -330,8 +279,8 @@ func PathExists(c *gin.Context) {
 // @Security BearerAuth
 func GetUserMenus(c *gin.Context) {
 	// 获取当前用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
+	userID := c.GetInt("user_id")
+	if userID == 0 {
 		response.Error(c, "未获取到用户信息")
 		return
 	}
@@ -340,7 +289,7 @@ func GetUserMenus(c *gin.Context) {
 	menuService := services.NewMenuService()
 
 	// 获取用户菜单
-	menus, err := menuService.GetUserMenus(userID.(int))
+	menus, err := menuService.GetUserMenus(userID)
 	if err != nil {
 		response.Error(c, "获取用户菜单失败: "+err.Error())
 		return

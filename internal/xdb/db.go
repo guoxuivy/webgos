@@ -1,4 +1,4 @@
-package database
+package xdb
 
 import (
 	"fmt"
@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	MasterDB *gorm.DB   // 主库连接
-	SlaveDBs []*gorm.DB // 备库连接池
+	masterDB *gorm.DB   // 主库连接
+	slaveDBs []*gorm.DB // 备库连接池
 )
 
 // InitDB 初始化数据库连接
@@ -41,7 +41,7 @@ func InitDB() error {
 	sqlDBInstance.SetMaxIdleConns(dbConfig.MaxIdleConns)                                // 设置最大空闲连接数
 	sqlDBInstance.SetConnMaxLifetime(time.Duration(dbConfig.MaxLifetime) * time.Minute) // 设置连接的最大生命周期
 
-	MasterDB = sqlDB
+	masterDB = sqlDB
 	return nil
 }
 
@@ -78,10 +78,10 @@ func dialector() (gorm.Dialector, error) {
 }
 
 func CloseDB() {
-	if MasterDB == nil {
+	if masterDB == nil {
 		return
 	}
-	sqlDB, err := MasterDB.DB()
+	sqlDB, err := masterDB.DB()
 	if err != nil {
 		fmt.Println("Failed to get database instance:", err)
 		return
@@ -89,7 +89,7 @@ func CloseDB() {
 	if err := sqlDB.Close(); err != nil {
 		fmt.Println("Failed to close database connection:", err)
 	}
-	for _, slaveDB := range SlaveDBs {
+	for _, slaveDB := range slaveDBs {
 		sqlDB, err = slaveDB.DB()
 		if err != nil {
 			fmt.Println("Failed to get database instance:", err)

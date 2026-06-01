@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"webgos/internal/dto"
-	"webgos/internal/models"
 	"webgos/internal/services"
 	"webgos/internal/utils/param"
 	"webgos/internal/utils/response"
@@ -10,31 +9,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// @Summary 当前登录用户信息
-// @Description 用户接口
-// @Tags 用户
+// UserInfo 获取用户信息
+// @Summary 获取当前登录用户信息
+// @Description 获取当前登录用户的详细信息
+// @Tags 用户管理
 // @Accept json
 // @Produce json
+// @Success 200 {object} response.Response{data=models.User}
+// @Failure 400 {object} response.Response
 // @Router /api/user/info [get]
 // @Security BearerAuth
 func UserInfo(c *gin.Context) {
-	userModel := &models.User{}
-	// 预加载关联的角色信息
-	userModel, err := userModel.Preload("Roles").Read(c.GetInt("user_id"))
+	userService := services.NewUserService()
+	user, err := userService.GetUserInfo(c.GetInt("user_id"))
 	if err != nil {
 		response.Error(c, "获取用户信息失败")
 		return
 	}
-	response.Success(c, "获取用户信息成功", userModel)
+	response.Success(c, "获取用户信息成功", user)
 }
 
-// @Summary 用户列表
-// @Description 获取用户列表接口
-// @Tags 用户
+// UsersList 获取用户列表
+// @Summary 获取用户列表
+// @Description 分页获取用户列表
+// @Tags 用户管理
 // @Accept json
 // @Produce json
-// @Param data body dto.UserQuery true "用户列表参数"
-// @Success 200 {object} response.Response "data={items: []models.User, total: int}"
+// @Param body body dto.UserQuery true "查询参数"
+// @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/user/list [post]
 // @Security BearerAuth
@@ -49,12 +51,13 @@ func UsersList(c *gin.Context) {
 	response.Success(c, "获取用户列表成功", gin.H{"items": items, "total": total})
 }
 
-// @Summary 用户添加、修改
-// @Description 添加、修改 传ID则为修改
-// @Tags 用户
+// UserEdit 编辑用户
+// @Summary 编辑用户信息
+// @Description 创建或更新用户信息
+// @Tags 用户管理
 // @Accept json
 // @Produce json
-// @Param data body dto.UserRegister true "用户注册参数"
+// @Param body body dto.UserRegister true "用户信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Router /api/user/edit [post]
