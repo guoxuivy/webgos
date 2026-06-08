@@ -17,6 +17,7 @@ type DepartmentService interface {
 	Delete(id int) error
 	GetTree() ([]models.Department, error)
 	AddUsers(departmentID int, userIDs []int) error
+	RemoveUser(userID int) error
 }
 
 type departmentService struct{}
@@ -148,4 +149,13 @@ func (s *departmentService) AddUsers(departmentID int, userIDs []int) error {
 	}
 
 	return xdb.GetDB().Model(&models.User{}).Where("id IN ?", userIDs).Update("department_id", departmentID).Error
+}
+
+func (s *departmentService) RemoveUser(userID int) error {
+	var user models.User
+	if err := xdb.GetDB().First(&user, userID).Error; err != nil {
+		return errors.New("用户不存在")
+	}
+
+	return xdb.GetDB().Model(&models.User{}).Where("id = ?", userID).Update("department_id", 0).Error
 }

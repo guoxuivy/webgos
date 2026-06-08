@@ -153,3 +153,32 @@ func AddDepartmentUsers(c *gin.Context) {
 
 	response.Success(c, "添加用户成功", nil)
 }
+
+// RemoveDepartmentUser 移除部门用户
+// @Summary 移除部门用户
+// @Description 将用户从部门中移除
+// @Tags 部门管理
+// @Accept json
+// @Produce json
+// @Param userID path int true "用户ID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Router /api/department/user/{userID} [delete]
+// @Security BearerAuth
+func RemoveDepartmentUser(c *gin.Context) {
+	userIDStr := c.Param("userID")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil || userID <= 0 {
+		response.Error(c, "无效的用户ID")
+		return
+	}
+
+	departmentService := services.NewDepartmentService()
+	err = departmentService.RemoveUser(userID)
+	if err != nil {
+		response.Error(c, "移除用户失败: "+err.Error())
+		return
+	}
+
+	response.Success(c, "移除用户成功", nil)
+}
