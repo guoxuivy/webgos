@@ -32,15 +32,6 @@ type EditDepartmentDTO struct {
 	Order    *int    `json:"order" validate:"omitempty,gte=0" label:"排序"`
 }
 
-type DepartmentQuery struct {
-	ID int `form:"id" validate:"required,gte=1" label:"部门ID"`
-}
-
-type SetLeaderDTO struct {
-	LeaderID int `json:"leader_id" validate:"required,gte=1" label:"负责人ID"`
-}
-
-type DepartmentUserQuery struct {
-	Page     int `form:"page" validate:"omitempty,min=1" label:"页码"`
-	PageSize int `form:"pageSize" validate:"omitempty,min=1,max=100" label:"每页数量"`
+type BatchUpdateDeptUsersDTO struct {
+	UserIDs []int `json:"user_ids" validate:"required" label:"用户ID列表"`
 }

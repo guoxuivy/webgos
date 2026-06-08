@@ -6,6 +6,7 @@ import (
 	"webgos/internal/dto"
 	"webgos/internal/models"
 	"webgos/internal/xdb"
+	"webgos/internal/xlog"
 
 	"gorm.io/gorm"
 )
@@ -14,10 +15,8 @@ type DepartmentService interface {
 	Create(dtoModel dto.AddDepartmentDTO) (*models.Department, error)
 	Update(dtoModel dto.EditDepartmentDTO) error
 	Delete(id int) error
-	GetByID(id int) (*models.Department, error)
 	GetTree() ([]models.Department, error)
-	GetUsers(departmentID int, page, pageSize int) ([]models.User, int64, error)
-	SetLeader(id, leaderID int) error
+	AddUsers(departmentID int, userIDs []int) error
 }
 
 type departmentService struct{}
@@ -114,57 +113,39 @@ func (s *departmentService) Delete(id int) error {
 	})
 }
 
-func (s *departmentService) GetByID(id int) (*models.Department, error) {
-	var department models.Department
-	if err := xdb.GetDB().Preload("Leader").First(&department, id).Error; err != nil {
-		return nil, errors.New("部门不存在")
-	}
-
-	return &department, nil
-}
-
 func (s *departmentService) GetTree() ([]models.Department, error) {
 	var departments []models.Department
 	if err := xdb.GetDB().Preload("Leader").Order("parent_id ASC, sort ASC").Find(&departments).Error; err != nil {
 		return nil, err
 	}
-
-	return buildDepartmentTree(departments, 0), nil
+	return s.buildDepartmentTree(departments, 0), nil
 }
 
-func buildDepartmentTree(departments []models.Department, parentID int) []models.Department {
+func (s *departmentService) buildDepartmentTree(departments []models.Department, parentID int) []models.Department {
 	var tree []models.Department
 	for i := range departments {
 		if departments[i].ParentID == parentID {
-			children := buildDepartmentTree(departments, departments[i].ID)
+			children := s.buildDepartmentTree(departments, departments[i].ID)
 			departments[i].Children = children
+
+			if err := xdb.GetDB().Where("department_id = ?", departments[i].ID).Find(&departments[i].Users).Error; err != nil {
+				xlog.Error("加载部门成员失败: %v", err)
+			}
 			tree = append(tree, departments[i])
 		}
 	}
 	return tree
 }
 
-func (s *departmentService) GetUsers(departmentID int, page, pageSize int) ([]models.User, int64, error) {
-	var users []models.User
-	var total int64
-
-	db := xdb.GetDB().Where("department_id = ?", departmentID)
-	db.Count(&total)
-	db = db.Scopes(models.Page(page, pageSize)).Find(&users)
-
-	return users, total, db.Error
-}
-
-func (s *departmentService) SetLeader(id, leaderID int) error {
+func (s *departmentService) AddUsers(departmentID int, userIDs []int) error {
 	var department models.Department
-	if err := xdb.GetDB().First(&department, id).Error; err != nil {
+	if err := xdb.GetDB().First(&department, departmentID).Error; err != nil {
 		return errors.New("部门不存在")
 	}
 
-	var leader models.User
-	if err := xdb.GetDB().First(&leader, leaderID).Error; err != nil {
-		return errors.New("用户不存在")
+	if len(userIDs) == 0 {
+		return nil
 	}
 
-	return xdb.GetDB().Model(&department).Update("leader_id", leaderID).Error
+	return xdb.GetDB().Model(&models.User{}).Where("id IN ?", userIDs).Update("department_id", departmentID).Error
 }

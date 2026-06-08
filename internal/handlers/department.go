@@ -98,35 +98,6 @@ func DeleteDepartment(c *gin.Context) {
 	response.Success(c, "部门删除成功", nil)
 }
 
-// GetDepartment 获取部门详情
-// @Summary 获取部门详情
-// @Description 根据ID获取部门详情
-// @Tags 部门管理
-// @Accept json
-// @Produce json
-// @Param id path int true "部门ID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Router /api/department/{id} [get]
-// @Security BearerAuth
-func GetDepartment(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		response.Error(c, "无效的部门ID")
-		return
-	}
-
-	departmentService := services.NewDepartmentService()
-	department, err := departmentService.GetByID(id)
-	if err != nil {
-		response.Error(c, "获取部门失败: "+err.Error())
-		return
-	}
-
-	response.Success(c, "获取部门成功", department)
-}
-
 // GetDepartmentTree 获取部门树
 // @Summary 获取部门树形结构
 // @Description 获取所有部门的树形结构
@@ -144,24 +115,22 @@ func GetDepartmentTree(c *gin.Context) {
 		response.Error(c, "获取部门树失败: "+err.Error())
 		return
 	}
-
 	response.Success(c, "获取部门树成功", tree)
 }
 
-// GetDepartmentUsers 获取部门用户
-// @Summary 获取部门用户列表
-// @Description 获取指定部门下的用户列表
+// AddDepartmentUsers 批量添加部门用户
+// @Summary 批量添加部门用户
+// @Description 批量将用户添加到指定部门
 // @Tags 部门管理
 // @Accept json
 // @Produce json
 // @Param id path int true "部门ID"
-// @Param page query int false "页码"
-// @Param pageSize query int false "每页数量"
+// @Param body body dto.BatchUpdateDeptUsersDTO true "用户ID列表"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/department/{id}/users [get]
+// @Router /api/department/{id}/users [post]
 // @Security BearerAuth
-func GetDepartmentUsers(c *gin.Context) {
+func AddDepartmentUsers(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil || id <= 0 {
@@ -169,61 +138,18 @@ func GetDepartmentUsers(c *gin.Context) {
 		return
 	}
 
-	var query dto.DepartmentUserQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		response.Error(c, err.Error())
-		return
-	}
-
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.PageSize == 0 {
-		query.PageSize = 20
-	}
-
-	departmentService := services.NewDepartmentService()
-	users, total, err := departmentService.GetUsers(id, query.Page, query.PageSize)
-	if err != nil {
-		response.Error(c, "获取部门用户失败: "+err.Error())
-		return
-	}
-
-	response.Success(c, "获取部门用户成功", gin.H{"items": users, "total": total})
-}
-
-// SetDepartmentLeader 设置部门负责人
-// @Summary 设置部门负责人
-// @Description 设置指定部门的负责人
-// @Tags 部门管理
-// @Accept json
-// @Produce json
-// @Param id path int true "部门ID"
-// @Param body body dto.SetLeaderDTO true "负责人信息"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Router /api/department/{id}/leader [put]
-// @Security BearerAuth
-func SetDepartmentLeader(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		response.Error(c, "无效的部门ID")
-		return
-	}
-
-	var dtoModel dto.SetLeaderDTO
+	var dtoModel dto.BatchUpdateDeptUsersDTO
 	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
 
 	departmentService := services.NewDepartmentService()
-	err = departmentService.SetLeader(id, dtoModel.LeaderID)
+	err = departmentService.AddUsers(id, dtoModel.UserIDs)
 	if err != nil {
-		response.Error(c, "设置负责人失败: "+err.Error())
+		response.Error(c, "添加用户失败: "+err.Error())
 		return
 	}
 
-	response.Success(c, "设置负责人成功", nil)
+	response.Success(c, "添加用户成功", nil)
 }

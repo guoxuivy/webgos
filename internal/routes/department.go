@@ -15,10 +15,8 @@ func init() {
 			department.POST("", "创建部门", handlers.CreateDepartment)
 			department.PUT("", "更新部门", handlers.UpdateDepartment)
 			department.DELETE("/:id", "删除部门", handlers.DeleteDepartment)
-			department.GET("/:id", "部门详情", handlers.GetDepartment)
 			department.GET("/tree", "部门树", handlers.GetDepartmentTree)
-			department.GET("/:id/users", "部门用户", handlers.GetDepartmentUsers)
-			department.PUT("/:id/leader", "设置负责人", handlers.SetDepartmentLeader)
+			department.POST("/:id/users", "批量添加用户", handlers.AddDepartmentUsers)
 		}
 	})
 }

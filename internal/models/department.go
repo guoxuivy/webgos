@@ -10,6 +10,7 @@ type Department struct {
 	Sort     int          `gorm:"column:sort;default:0" json:"sort"`
 	Leader   *User        `gorm:"foreignKey:LeaderID" json:"leader"`
 	Children []Department `gorm:"-" json:"children"`
+	Users    []User       `gorm:"-" json:"users"`
 }
 
 func (Department) TableName() string {
