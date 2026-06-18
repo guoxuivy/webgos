@@ -8,8 +8,8 @@ import (
 
 // 应用全局中间件包含请求ID、恢复、日志记录和跨域
 func ApplyMiddlewares(r *gin.Engine, config *config.Config) {
-	// 初始化IP黑名单管理器
-	InitIPBlacklist(config.Runtime.Dir)
+	// IP黑名单中间件（最高优先级，黑名单IP直接拦截，内部自动初始化）
+	r.Use(IPBlacklistMiddleware(config.Runtime.Dir))
 
 	// 请求ID中间件
 	r.Use(RequestID())

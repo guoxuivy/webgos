@@ -25,8 +25,8 @@ var sensitivePatterns = []struct {
 	pattern *regexp.Regexp
 	name    string
 }{
-	{regexp.MustCompile(`(?i)\.env`), "env-file"},
-	{regexp.MustCompile(`(?i)\.bak`), "backup-file"},
+	{regexp.MustCompile(`(?i)\.env\b`), "env-file"},
+	{regexp.MustCompile(`(?i)\.bak\b`), "backup-file"},
 	{regexp.MustCompile(`(?i)config\.(json|yaml|yml|toml|ini)`), "config-file"},
 	{regexp.MustCompile(`(?i)\.git/config`), "git-config"},
 	{regexp.MustCompile(`(?i)\.gitignore`), "gitignore"},
@@ -35,7 +35,7 @@ var sensitivePatterns = []struct {
 	{regexp.MustCompile(`(?i)phpmyadmin`), "phpmyadmin"},
 	{regexp.MustCompile(`(?i)wp-admin`), "wp-admin"},
 	{regexp.MustCompile(`(?i)wp-content`), "wp-content"},
-	{regexp.MustCompile(`(?i)\.sql`), "sql-dump"},
+	{regexp.MustCompile(`(?i)\.sql\b`), "sql-dump"},
 	{regexp.MustCompile(`(?i)\.(log|txt|md)$`), "log-txt-file"},
 	{regexp.MustCompile(`(?i)\.(tar|gz|zip|rar|7z)`), "archive-file"},
 	{regexp.MustCompile(`(?i)robots\.txt`), "robots-txt"},
@@ -69,6 +69,7 @@ var maliciousIPTracker = &MaliciousIPTracker{
 	maxTrack: 10000,
 }
 
+// IsSensitivePath 是否为敏感路径
 func IsSensitivePath(path string) bool {
 	if len(path) > maxPathLen {
 		path = path[:maxPathLen]
@@ -79,7 +80,7 @@ func IsSensitivePath(path string) bool {
 		}
 	}
 	lowerPath := strings.ToLower(path)
-	sensitiveKeywords := []string{"shell", "cmd", "exec", "eval", "passwd", "shadow", "htaccess"}
+	sensitiveKeywords := []string{"/shell", "/cmd", "/exec", "/eval", "/passwd", "/shadow", "/htaccess"}
 	for _, kw := range sensitiveKeywords {
 		if strings.Contains(lowerPath, kw) {
 			return true
@@ -89,6 +90,9 @@ func IsSensitivePath(path string) bool {
 }
 
 func getSensitivePatternName(path string) string {
+	if len(path) > maxPathLen {
+		path = path[:maxPathLen]
+	}
 	for _, sp := range sensitivePatterns {
 		if sp.pattern.MatchString(path) {
 			return sp.name
@@ -97,6 +101,7 @@ func getSensitivePatternName(path string) string {
 	return "unknown"
 }
 
+// LogSensitiveAccess 记录敏感路径访问
 func LogSensitiveAccess(c *gin.Context) {
 	ip := c.ClientIP()
 	path := c.Request.URL.Path
@@ -107,6 +112,7 @@ func LogSensitiveAccess(c *gin.Context) {
 
 	maliciousIPTracker.record(ip, path, pattern)
 
+	// 检查是否需要封禁IP
 	if maliciousIPTracker.shouldBan(ip) {
 		AddToBlacklist(ip)
 		xlog.Warn("[SECURITY] 恶意IP自动封禁 IP=%s", ip)
@@ -164,21 +170,19 @@ func (t *MaliciousIPTracker) shouldBan(ip string) bool {
 	return exists && record.Count >= banThreshold
 }
 
-func GetMaliciousIPs() []MaliciousIPRecord {
-	maliciousIPTracker.mu.RLock()
-	defer maliciousIPTracker.mu.RUnlock()
+// cleanupExpired 清理过期的命中记录
+func (t *MaliciousIPTracker) cleanupExpired() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
-	result := make([]MaliciousIPRecord, 0, len(maliciousIPTracker.records))
-	for _, record := range maliciousIPTracker.records {
-		result = append(result, *record)
+	// 超过统计窗口 30 倍的记录视为过期
+	expireDuration := scanWindow * 30
+	now := time.Now()
+	for ip, rec := range t.records {
+		if now.Sub(rec.FirstSeen) > expireDuration {
+			delete(t.records, ip)
+		}
 	}
-	return result
-}
-
-func ClearMaliciousIPs() {
-	maliciousIPTracker.mu.Lock()
-	defer maliciousIPTracker.mu.Unlock()
-	maliciousIPTracker.records = make(map[string]*MaliciousIPRecord)
 }
 
 // ===== IP 黑名单管理器 =====
@@ -203,11 +207,7 @@ var GlobalIPBlacklist = &IPBlacklist{
 	enable: true,
 }
 
-func InitIPBlacklist(dir string) {
-	GlobalIPBlacklist.savePath = filepath.Join(dir, "blacklist.json")
-	GlobalIPBlacklist.loadFromFile()
-	GlobalIPBlacklist.startAutoSave()
-}
+var blacklistOnce sync.Once
 
 func (b *IPBlacklist) loadFromFile() {
 	b.mu.Lock()
@@ -248,6 +248,9 @@ func (b *IPBlacklist) loadFromFile() {
 }
 
 func (b *IPBlacklist) saveToFile() {
+	// 顺便清理过期的恶意IP追踪记录
+	maliciousIPTracker.cleanupExpired()
+
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -308,14 +311,7 @@ func AddToBlacklist(ip string) {
 	xlog.Warn("[SECURITY] 添加黑名单 IP=%s", ip)
 }
 
-func RemoveFromBlacklist(ip string) {
-	GlobalIPBlacklist.mu.Lock()
-	defer GlobalIPBlacklist.mu.Unlock()
-	delete(GlobalIPBlacklist.ips, ip)
-	xlog.Info("[SECURITY] 移除黑名单 IP=%s", ip)
-}
-
-func IsBlacklisted(ip string) bool {
+func isBlacklisted(ip string) bool {
 	GlobalIPBlacklist.mu.RLock()
 	defer GlobalIPBlacklist.mu.RUnlock()
 
@@ -341,22 +337,22 @@ func IsBlacklisted(ip string) bool {
 	return false
 }
 
-func GetBlacklistCount() int {
-	GlobalIPBlacklist.mu.RLock()
-	defer GlobalIPBlacklist.mu.RUnlock()
-	return len(GlobalIPBlacklist.ips) + len(GlobalIPBlacklist.cidrs)
-}
+// IPBlacklistMiddleware IP黑名单中间件
+func IPBlacklistMiddleware(dir string) gin.HandlerFunc {
+	blacklistOnce.Do(func() {
+		GlobalIPBlacklist.savePath = filepath.Join(dir, "blacklist.json")
+		GlobalIPBlacklist.loadFromFile()
+		GlobalIPBlacklist.startAutoSave()
+	})
 
-func IPBlacklistMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
-		if IsBlacklisted(ip) {
+		if isBlacklisted(ip) {
 			xlog.Warn("[SECURITY] 黑名单IP请求被拒绝 IP=%s Path=%s", ip, c.Request.URL.Path)
-			c.JSON(403, gin.H{
+			c.AbortWithStatusJSON(403, gin.H{
 				"code":    403,
 				"message": "请求被拒绝",
 			})
-			c.Abort()
 			return
 		}
 		c.Next()
