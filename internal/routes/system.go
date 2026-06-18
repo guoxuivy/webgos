@@ -12,12 +12,13 @@ func init() {
 	Register(func(router *gin.Engine) {
 
 		// 登录相关路由（公开）
-		publicGroup := router.Group("/auth")
+		loginGroup := router.Group("/auth")
+		loginGroup.Use(middleware.IPLimiter(1, 1))
 		{
-			publicGroup.POST("/register", handlers.RegisterUser)
-			publicGroup.POST("/login", handlers.Login)
-			publicGroup.POST("/logout", handlers.Logout)
-			publicGroup.POST("/reset-password", handlers.ResetPassword)
+			loginGroup.POST("/register", handlers.RegisterUser)
+			loginGroup.POST("/login", handlers.Login)
+			loginGroup.POST("/logout", handlers.Logout)
+			loginGroup.POST("/reset-password", handlers.ResetPassword)
 		}
 
 		// 需要认证的路由组
@@ -28,11 +29,9 @@ func init() {
 		menu := WrapRouter(api.Group("/menu"))
 		{
 			menu.POST("", "创建菜单", handlers.AddMenu)
-			// menu.POST("/", "创建菜单1", handlers.AddMenu)
 			menu.GET("/:id", "菜单详情", handlers.GetMenu)
 			menu.PUT("/:id", "编辑菜单", handlers.EditMenu)
 			menu.DELETE("/:id", "删除菜单", handlers.DeleteMenu)
-
 			menu.GET("/list", "获取菜单列表", handlers.GetMenus)
 			menu.GET("/tree", "获取菜单树", handlers.GetMenuTree)
 			menu.GET("/name_exists", "检查菜单名称是否存在", handlers.NameExists)
