@@ -46,5 +46,11 @@ func New(config *config.Config) *gin.Engine {
 
 // handleNotFound 处理404错误
 func handleNotFound(c *gin.Context) {
+	path := c.Request.URL.Path
+	// 检测敏感路径访问
+	if middleware.IsSensitivePath(path) {
+		middleware.LogSensitiveAccess(c)
+	}
+
 	response.ErrorWithCode(c, "请求的资源不存在", http.StatusNotFound)
 }

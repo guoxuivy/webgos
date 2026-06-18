@@ -14,6 +14,11 @@ func Marshal(v any) ([]byte, error) {
 	return j.Marshal(v)
 }
 
+// MarshalIndent 利用json-iterator进行带缩进的json编码
+func MarshalIndent(v any, prefix, indent string) ([]byte, error) {
+	return j.MarshalIndent(v, prefix, indent)
+}
+
 // Unmarshal 利用json-iterator进行json解码
 func Unmarshal(data []byte, v any) error {
 	return j.Unmarshal(data, v)

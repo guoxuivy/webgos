@@ -30,7 +30,7 @@ func IPLimiter(rate, capacity int) gin.HandlerFunc {
 		if b.TryTake(1) {
 			c.Next()
 		} else {
-			xlog.Error("IP %s 超过请求频率限制", ip)
+			xlog.Warn("[SECURITY] IP %s 超过请求频率限制", ip)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"code":    http.StatusInternalServerError,
 				"message": "服务器内部错误",

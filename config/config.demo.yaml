@@ -36,13 +36,15 @@ database:
       max_open_conns: 80
       max_idle_conns: 20
       max_lifetime: 30
+# 运行时数据目录配置
+runtime:
+  dir: "./runtime" # 运行时数据根目录，日志存放在 {dir}/logs，黑名单存放在 {dir}/blacklist.json
 
 # 日志配置，严格大小写
 log:
   level: "Info" # 日志级别:  Error, Warn, Info
   access: true # 是记录访问日志
   level_sql: "Info" # SQL日志级别: Silent, Error, Warn, Info
-  dir: "./logs" # 日志保存目录
 
 website:
   dir: "./public" # 网站根目录

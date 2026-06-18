@@ -92,7 +92,7 @@ func InitLogger() error {
 
 	config := config.GlobalConfig
 	if config != nil {
-		logDir = config.Log.Dir
+		logDir = config.Runtime.Dir + "/logs"
 		logAccess = config.Log.Access
 		isDebug = config.Server.Mode == "debug"
 		switch config.Log.Level {

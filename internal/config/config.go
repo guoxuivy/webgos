@@ -43,11 +43,13 @@ type Config struct {
 		Port int    `yaml:"port"` // 服务器端口
 		Swag bool   `yaml:"swag"` // 是否启用 Swagger 文档接口
 	} `yaml:"server"`
+	Runtime struct {
+		Dir string `yaml:"dir"` // 运行时数据目录，日志、黑名单等文件均存放于此
+	} `yaml:"runtime"`
 	Log struct {
 		Level    string `yaml:"level"`     // 日志级别:  Error, Warn, Info
 		Access   bool   `yaml:"access"`    // 是否启用访问日志
 		LevelSQL string `yaml:"level_sql"` // SQL日志级别: Silent, Error, Warn, Info
-		Dir      string `yaml:"dir"`       // 日志保存目录
 	} `yaml:"log"`
 	JWT struct {
 		Secret string `yaml:"secret"`
@@ -129,8 +131,8 @@ func validateConfig(config *Config) error {
 		config.Database.MaxLifetime = 60
 	}
 
-	if config.Log.Dir == "" {
-		config.Log.Dir = "./runtime/logs"
+	if config.Runtime.Dir == "" {
+		config.Runtime.Dir = "./runtime"
 	}
 	if config.Log.Level == "" {
 		config.Log.Level = "Info"
