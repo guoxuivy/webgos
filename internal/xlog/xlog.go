@@ -162,6 +162,11 @@ func (l *log) Printf(format string, v ...any) {
 	l.enqueue("SQL", format, v...)
 }
 
+// ANSI颜色代码的正则表达式
+// 用于剥离日志消息中可能携带的 ANSI 颜色转义序列（如 gorm 在 Colorful 模式下为 SQL 日志添加的颜色），
+// 以保证写入文件的日志为纯文本，避免 cat/less 时出现乱码。
+var ansiColorRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
 // enqueue 将日志条目加入缓冲通道
 func (l *log) enqueue(level, format string, v ...any) {
 	message := fmt.Sprintf(format, v...)
@@ -171,6 +176,7 @@ func (l *log) enqueue(level, format string, v ...any) {
 	case "ACCESS", "SQL":
 		message = fmt.Sprintf("%s %s", now, message)
 	default:
+		// 跳过 enqueue 与 Info/Warn/Error 等入口两层，取到业务调用方的文件行号
 		_, file, line, _ := runtime.Caller(2)
 		fileName := filepath.Base(file)
 		message = fmt.Sprintf("%s %s:%d - %s", now, fileName, line, message)
@@ -184,8 +190,7 @@ func (l *log) enqueue(level, format string, v ...any) {
 	if Xlogger.isDebug {
 		fmt.Printf("%v[%s]%v %s\n", levelColor[msg.level], msg.level, ColorReset, msg.message)
 	}
-	// ANSI颜色代码的正则表达式
-	var ansiColorRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	// 剥离 ANSI 颜色后落盘（上方面 isDebug 分支已用带色内容打印到控制台）
 	msg.message = ansiColorRegex.ReplaceAllString(msg.message, "")
 
 	// 将消息发送到缓冲通道
@@ -230,7 +235,6 @@ func (l *log) writeToFile(level, message string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write %s log: %v\n", level, err)
 	}
-	file.Sync()
 }
 
 // flushLoop 后台刷新协程，定时5秒或按量刷新缓冲区
@@ -263,11 +267,22 @@ func (l *log) flushLoop() {
 }
 
 // flushBuffer 实际执行日志写入
+// 批量写完后，对每个涉及的日志文件仅 Sync 一次，避免每条日志都触发 fsync。
 func (l *log) flushBuffer(buffer []*logMsg) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	synced := make(map[string]bool)
 	for _, msg := range buffer {
 		l.writeToFile(msg.level, msg.message)
+		synced[msg.level] = true
+	}
+	// 同一 level 对应同一个文件，按 level 去重后各 Sync 一次
+	for level := range synced {
+		if file := l.logFiles[level]; file != nil {
+			if err := file.Sync(); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to sync %s log: %v\n", level, err)
+			}
+		}
 	}
 }
 
