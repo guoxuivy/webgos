@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strconv"
+	"strings"
 	"time"
 	"webgos/internal/config"
 	"webgos/internal/xdb"
@@ -31,14 +32,14 @@ func RBAC() gin.HandlerFunc {
 		}
 
 		// 从缓存获取用户权限
-		cacheKey := "permissions:" + strconv.Itoa(userID)
+		cacheKey := cache.PermissionPrefix + ":" + strconv.Itoa(userID)
 		userPermissions, found := cache.GetCache().Get(cacheKey)
 		var permissions map[string]bool
 
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User
-			if err := xdb.GetDB().Preload("Roles.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
+			if err := xdb.GetDB().Preload("Roles.Menus.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
 				response.AuthError(c, "用户不存在")
 				return
 			}
@@ -47,12 +48,14 @@ func RBAC() gin.HandlerFunc {
 				c.Next()
 				return
 			}
-			// 收集用户所有权限
+			// 收集用户所有权限：user → roles → menus → permissions
 			permissions = make(map[string]bool)
 			for _, role := range user.Roles {
-				for _, perm := range role.Permissions {
-					key := perm.Path + ":" + perm.Method
-					permissions[key] = true
+				for _, menu := range role.Menus {
+					for _, perm := range menu.Permissions {
+						key := perm.Path + ":" + perm.Method
+						permissions[key] = true
+					}
 				}
 			}
 			// 将权限存入缓存
@@ -69,9 +72,9 @@ func RBAC() gin.HandlerFunc {
 			permissions = permissionsMap
 		}
 
-		// 检查当前请求是否有权限
-		currentPath := c.FullPath()
-		currentMethod := c.Request.Method
+		// 检查当前请求是否有权限（统一转小写，与权限点同步时存储的 path 保持一致）
+		currentPath := strings.ToLower(c.FullPath())
+		currentMethod := strings.ToUpper(c.Request.Method)
 		requiredPermission := currentPath + ":" + currentMethod
 
 		if permissions[requiredPermission] {

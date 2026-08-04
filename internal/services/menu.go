@@ -7,6 +7,8 @@ import (
 	"webgos/internal/xdb"
 	"webgos/internal/dto"
 	"webgos/internal/models"
+
+	"gorm.io/gorm"
 )
 
 type MenuService interface {
@@ -21,6 +23,7 @@ type MenuService interface {
 	IsNameExists(name string, id ...int) (bool, error)
 	IsPathExists(path string, id ...int) (bool, error)
 	GetUserMenus(userID int) ([]models.Menu, error)
+	AssignPermissionsToMenu(menuID int, permissionIDs []int) error
 }
 
 type menuService struct{}
@@ -33,7 +36,6 @@ func (s *menuService) AddMenu(dtoModel dto.MenuDTO) (*models.Menu, error) {
 	menu := &models.Menu{
 		Name:      dtoModel.Name,
 		Path:      dtoModel.Path,
-		AuthCode:  dtoModel.AuthCode,
 		Component: dtoModel.Component,
 		Type:      dtoModel.Type,
 		Status:    dtoModel.Status,
@@ -55,7 +57,6 @@ func (s *menuService) EditMenu(id int, dtoModel dto.MenuDTO) error {
 
 	menu.Name = dtoModel.Name
 	menu.Path = dtoModel.Path
-	menu.AuthCode = dtoModel.AuthCode
 	menu.Component = dtoModel.Component
 	menu.Type = dtoModel.Type
 	menu.Status = dtoModel.Status
@@ -148,7 +149,7 @@ func (s *menuService) IsPathExists(path string, id ...int) (bool, error) {
 
 func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 	var user models.User
-	if err := xdb.GetDB().Preload("Roles").First(&user, userID).Error; err != nil {
+	if err := xdb.GetDB().Preload("Roles.Menus").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -159,9 +160,8 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 
 	menuIDMap := make(map[int]bool)
 	for _, role := range user.Roles {
-		menuIDs := role.GetMenuIDs()
-		for _, menuID := range menuIDs {
-			menuIDMap[menuID] = true
+		for _, menu := range role.Menus {
+			menuIDMap[menu.ID] = true
 		}
 	}
 
@@ -187,6 +187,29 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 	menuTree := buildMenuTree(menus, 0)
 	setRedirectForMenus(menuTree)
 	return menuTree, nil
+}
+
+// AssignPermissionsToMenu 维护菜单-权限多对多关系，支持同一权限绑定多个菜单。
+// 采用 Replace 语义，保证幂等。
+func (s *menuService) AssignPermissionsToMenu(menuID int, permissionIDs []int) error {
+	var menu models.Menu
+	if err := xdb.GetDB().First(&menu, menuID).Error; err != nil {
+		return errors.New("菜单不存在")
+	}
+
+	var permissions []models.RBACPermission
+	if len(permissionIDs) > 0 {
+		if err := xdb.GetDB().Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+			return errors.New("查询权限时出错")
+		}
+		if len(permissions) != len(permissionIDs) {
+			return errors.New("部分权限不存在")
+		}
+	}
+
+	return xdb.GetDB().Transaction(func(tx *gorm.DB) error {
+		return tx.Model(&menu).Association("Permissions").Replace(permissions)
+	})
 }
 
 func setRedirectForMenus(menus []models.Menu) {

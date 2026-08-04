@@ -94,19 +94,19 @@ func AssignRoles(c *gin.Context) {
 	response.Success(c, "角色分配成功", nil)
 }
 
-// AssignPermissions 分配权限
-// @Summary 分配权限给角色
-// @Description 给角色分配权限
+// AssignMenus 分配菜单给角色
+// @Summary 分配菜单给角色
+// @Description 给角色分配菜单，角色通过菜单间接获得权限
 // @Tags 角色权限
 // @Accept json
 // @Produce json
-// @Param body body dto.AssignPermissionsDTO true "权限分配信息"
+// @Param body body dto.AssignMenusDTO true "菜单分配信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/assign_permissions [post]
+// @Router /api/rbac/assign_menus [post]
 // @Security BearerAuth
-func AssignPermissions(c *gin.Context) {
-	var dtoModel dto.AssignPermissionsDTO
+func AssignMenus(c *gin.Context) {
+	var dtoModel dto.AssignMenusDTO
 
 	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
@@ -114,13 +114,13 @@ func AssignPermissions(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	err := rbacService.AssignPermissionsToRole(dtoModel.RoleID, dtoModel.PermissionIDs)
+	err := rbacService.AssignMenusToRole(dtoModel.RoleID, dtoModel.MenuIDs)
 	if err != nil {
-		response.Error(c, "分配权限失败: "+err.Error())
+		response.Error(c, "分配菜单失败: "+err.Error())
 		return
 	}
 
-	response.Success(c, "权限分配成功", nil)
+	response.Success(c, "菜单分配成功", nil)
 }
 
 // GetRoleByID 获取角色详情

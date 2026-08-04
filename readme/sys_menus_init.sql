@@ -47,10 +47,41 @@ CREATE TABLE `sys_menus` (
   `iframe_src` varchar(255) DEFAULT NULL COMMENT 'iframe地址',
   `link` varchar(255) DEFAULT NULL COMMENT '外链地址',
   `pid` bigint DEFAULT NULL COMMENT '父级菜单ID',
-  `auth_code` varchar(255) DEFAULT NULL COMMENT '权限标识',
   PRIMARY KEY (`id`),
   KEY `idx_sys_menus_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `rbac_role_menus`
+-- 角色-菜单关联（取代原 rbac_roles.menu_ids 字符串）
+--
+
+DROP TABLE IF EXISTS `rbac_role_menus`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `rbac_role_menus` (
+  `rbac_role_id` bigint NOT NULL COMMENT '角色ID',
+  `menu_id` bigint NOT NULL COMMENT '菜单ID',
+  PRIMARY KEY (`rbac_role_id`,`menu_id`),
+  KEY `idx_rbac_role_menus_menu` (`menu_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `rbac_menu_permissions`
+-- 菜单-权限关联（多对多，同一权限可绑定多个菜单）
+--
+
+DROP TABLE IF EXISTS `rbac_menu_permissions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `rbac_menu_permissions` (
+  `menu_id` bigint NOT NULL COMMENT '菜单ID',
+  `rbac_permission_id` bigint NOT NULL COMMENT '权限点ID',
+  PRIMARY KEY (`menu_id`,`rbac_permission_id`),
+  KEY `idx_rbac_menu_permissions_perm` (`rbac_permission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

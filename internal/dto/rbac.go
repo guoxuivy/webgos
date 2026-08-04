@@ -5,7 +5,7 @@ type AddRoleDTO struct {
 	Name   string `json:"name" validate:"required,min=1,max=50" label:"角色名称"`
 	Remark string `json:"remark" validate:"omitempty,max=200" label:"角色备注"`
 	Status int    `json:"status" validate:"oneof=0 1" label:"状态"` // 0-禁用 1-启用
-	Menus  []int  `json:"menus" validate:"omitempty" label:"菜单ID列表"`
+	MenuIDs []int  `json:"menu_ids" validate:"omitempty" label:"菜单ID列表"`
 }
 
 type EditRoleDTO struct {
@@ -13,7 +13,7 @@ type EditRoleDTO struct {
 	Name   *string `json:"name" validate:"omitempty,min=1,max=50" label:"角色名称"`
 	Remark *string `json:"remark" validate:"omitempty,max=200" label:"角色备注"`
 	Status *int    `json:"status" validate:"omitempty,oneof=0 1" label:"状态"` // 0-禁用 1-启用
-	Menus  []int   `json:"menus" validate:"omitempty" label:"菜单ID列表"`
+	MenuIDs []int  `json:"menu_ids" validate:"omitempty" label:"菜单ID列表"`
 }
 
 // AssignRolesDTO 分配角色给用户DTO
@@ -22,17 +22,17 @@ type AssignRolesDTO struct {
 	RoleIDs []int `json:"role_ids" validate:"required,min=1" label:"角色ID列表"`
 }
 
-// AssignPermissionsDTO 分配权限给角色DTO
-type AssignPermissionsDTO struct {
-	RoleID        int   `json:"role_id" validate:"required" label:"角色ID"`
-	PermissionIDs []int `json:"permission_ids" validate:"required" label:"权限ID列表"`
+// AssignMenusDTO 分配菜单给角色DTO
+type AssignMenusDTO struct {
+	RoleID  int   `json:"role_id" validate:"required" label:"角色ID"`
+	MenuIDs []int `json:"menu_ids" validate:"required,min=1" label:"菜单ID列表"`
 }
 
-// AssignMenusDTO 分配菜单给角色DTO
-// type AssignMenusDTO struct {
-// 	RoleID  int   `json:"role_id" validate:"required" label:"角色ID"`
-// 	MenuIDs []int `json:"menu_ids" validate:"required,min=1" label:"菜单ID列表"`
-// }
+// AssignPermissionsToMenuDTO 分配权限给菜单DTO（多对多，同一权限可绑多个菜单）
+type AssignPermissionsToMenuDTO struct {
+	MenuID        int   `json:"menu_id" validate:"required" label:"菜单ID"`
+	PermissionIDs []int `json:"permission_ids" validate:"required" label:"权限ID列表"`
+}
 
 // GetRoleDTO 获取角色DTO
 type GetRoleDTO struct {

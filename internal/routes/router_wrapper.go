@@ -103,16 +103,24 @@ func (w *RouterWrapper) calculateFullPath(relativePath string) string {
 	return finalPath
 }
 
-// SyncPermissions 将收集的路由信息同步到数据库作为权限点
+// SyncPermissions 将收集的路由信息同步到数据库作为权限点，
+// 并按路径前缀自动归属到匹配的菜单（支持同一权限绑定多个菜单）。
 func SyncPermissions(db *gorm.DB) error {
+	// 预加载所有菜单（用于前缀匹配）
+	var menus []models.Menu
+	if err := db.Find(&menus).Error; err != nil {
+		return err
+	}
+
 	for _, route := range routeInfos {
 		// 查找是否已存在该权限
 		var existingPermission models.RBACPermission
 		result := db.Where("name = ?", route.Name).First(&existingPermission)
 
+		var permission models.RBACPermission
 		if result.Error != nil {
 			// 权限不存在，创建新权限
-			permission := models.RBACPermission{
+			permission = models.RBACPermission{
 				Path:        route.Path,
 				Method:      route.Method,
 				Description: route.Description,
@@ -127,6 +135,19 @@ func SyncPermissions(db *gorm.DB) error {
 			if err := db.Save(&existingPermission).Error; err != nil {
 				return err
 			}
+			permission = existingPermission
+		}
+
+		// 按路径前缀匹配归属菜单（菜单 path 为权限 path 的前缀即视为归属）
+		matched := make([]models.Menu, 0)
+		for _, menu := range menus {
+			if menu.Path != "" && strings.HasPrefix(route.Path, menu.Path) {
+				matched = append(matched, menu)
+			}
+		}
+		// 用 Replace 保证幂等：本次同步结果即权威关系
+		if err := db.Model(&permission).Association("Menus").Replace(matched); err != nil {
+			return err
 		}
 	}
 	return nil

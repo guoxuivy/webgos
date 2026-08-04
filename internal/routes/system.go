@@ -37,6 +37,8 @@ func init() {
 			menu.GET("/name_exists", "检查菜单名称是否存在", handlers.NameExists)
 			menu.GET("/path_exists", "检查菜单路径是否存在", handlers.PathExists)
 			menu.GET("/user_menus", "获取当前用户目录", handlers.GetUserMenus)
+			menu.GET("/permissions/:id", "菜单权限项", handlers.GetMenuPermissions)
+			menu.POST("/permissions", "绑定菜单权限", handlers.AssignPermissionsToMenu)
 		}
 
 		// 角色管理路由(勿动)~
@@ -46,7 +48,7 @@ func init() {
 			rbac.POST("/edit_role", "编辑角色", handlers.EditRole)
 			rbac.GET("/roles", "角色列表", handlers.GetRoles)
 			rbac.POST("/assign_roles", "分配角色给用户", handlers.AssignRoles)
-			rbac.POST("/assign_permissions", "分配权限给角色", handlers.AssignPermissions)
+			rbac.POST("/assign_menus", "分配菜单给角色", handlers.AssignMenus)
 			rbac.DELETE("/permission/:id", "删除权限", handlers.DeletePermission)
 			rbac.GET("/permissions", "全部权限项", handlers.GetPermissions)
 			rbac.GET("/role_permissions/:id", "角色权限项", handlers.GetRolePermissions)

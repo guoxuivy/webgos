@@ -6,13 +6,13 @@ type Menu struct {
 	Name      string   `gorm:"size:50;not null;comment:菜单名称" json:"name"`
 	Path      string   `gorm:"size:255;comment:路由路径" json:"path"`
 	Component string   `gorm:"size:255;comment:组件路径" json:"component"`
-	AuthCode  string   `gorm:"size:255;comment:权限标识" json:"authCode"`
 	Type      string   `gorm:"size:20;not null;comment:菜单类型" json:"type"`
 	Status    int      `gorm:"type:tinyint;default:1;comment:状态 0-禁用 1-启用" json:"status"`
 	Redirect  string   `gorm:"-" json:"redirect"`
 	Meta      MenuMeta `gorm:"embedded" json:"meta"`
-	Pid       int      `gorm:"comment:父级菜单ID" json:"pid"`
-	Children  []Menu   `gorm:"-" json:"children,omitempty"`
+	Pid       int             `gorm:"comment:父级菜单ID" json:"pid"`
+	Children  []Menu           `gorm:"-" json:"children,omitempty"`
+	Permissions []RBACPermission `gorm:"many2many:rbac_menu_permissions;" json:"permissions"`
 }
 
 type MenuMeta struct {

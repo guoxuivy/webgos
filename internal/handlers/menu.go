@@ -297,3 +297,59 @@ func GetUserMenus(c *gin.Context) {
 
 	response.Success(c, "获取用户菜单成功", menus)
 }
+
+// GetMenuPermissions 获取菜单下绑定的权限点列表
+// @Summary 获取菜单权限
+// @Description 获取指定菜单所绑定的所有权限点（多对多）
+// @Tags 菜单管理
+// @Accept json
+// @Produce json
+// @Param id path int true "菜单ID"
+// @Success 200 {object} response.Response
+// @Router /api/menu/permissions/{id} [get]
+// @Security BearerAuth
+func GetMenuPermissions(c *gin.Context) {
+	menuID := convert.S2Int(c.Param("id"))
+	if menuID == 0 {
+		response.Error(c, "无效的菜单ID")
+		return
+	}
+
+	if _, err := services.NewMenuService().GetMenuByID(menuID); err != nil {
+		response.Error(c, "菜单不存在")
+		return
+	}
+
+	perms, err := services.NewRBACService().GetMenuPermissions(menuID)
+	if err != nil {
+		response.Error(c, "获取菜单权限失败: "+err.Error())
+		return
+	}
+	response.Success(c, "获取菜单权限成功", perms)
+}
+
+// AssignPermissionsToMenu 将权限点绑定到菜单（同一权限可绑多个菜单）
+// @Summary 绑定菜单权限
+// @Description 将权限点集合绑定到指定菜单
+// @Tags 菜单管理
+// @Accept json
+// @Produce json
+// @Param body body dto.AssignPermissionsToMenuDTO true "绑定信息"
+// @Success 200 {object} response.Response
+// @Router /api/menu/permissions [post]
+// @Security BearerAuth
+func AssignPermissionsToMenu(c *gin.Context) {
+	var dtoModel dto.AssignPermissionsToMenuDTO
+	if err := param.Validate(c, &dtoModel); err != nil {
+		response.Error(c, err.Error())
+		return
+	}
+
+	menuService := services.NewMenuService()
+	if err := menuService.AssignPermissionsToMenu(dtoModel.MenuID, dtoModel.PermissionIDs); err != nil {
+		response.Error(c, "绑定菜单权限失败: "+err.Error())
+		return
+	}
+	response.Success(c, "绑定菜单权限成功", nil)
+}
+
