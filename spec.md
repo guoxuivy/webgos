@@ -36,7 +36,7 @@ User ──< rbac_user_roles >── Role ──< rbac_role_menus >── Menu �
 | --- | --- | --- |
 | 模型 | `internal/models/rbac.go` | `RBACPermission` 加 `Menus []Menu`（many2many `rbac_menu_permissions`），**不使用单外键**；`RBACRole` 加 `Menus []Menu`（many2many `rbac_role_menus`）；移除 `RBACRolePermission` 结构体 |
 | 模型 | `internal/models/menu.go` | `Menu` 加 `Permissions []RBACPermission`（many2many `rbac_menu_permissions`） |
-| 服务 | `internal/services/rbac.go` | 移除 `AssignPermissionsToRole`，新增 `AssignMenusToRole`；`AddRole`/`EditRole`/`GetRoles` 使用菜单关联；`SyncPermissions` 自动匹配并存写 `rbac_menu_permissions` 多对多关系 |
+| 服务 | `internal/services/rbac.go` | 移除 `AssignPermissionsToRole`，新增 `AssignMenusToRole`；`AddRole`/`EditRole`/`GetRoles` 使用菜单关联；`SyncPermissions` 仅同步权限点本身（创建/更新描述），不自动归属菜单 |
 | 服务 | `internal/services/menu.go` | `GetUserMenus` 改用 GORM 关联替代 `GetMenuIDs()` 字符串解析；新增 `AssignPermissionsToMenu` 维护菜单-权限多对多 |
 | 中间件 | `internal/middleware/rbac.go` | 校验链路改为 `user → roles → menus → permissions`，三层 Preload（含菜单-权限多对多） |
 | DTO | `internal/dto/rbac.go` | `AssignPermissionsDTO`（role_id + perm_ids）改为 `AssignMenusDTO`（role_id + menu_ids）；新增 `AssignPermissionsToMenuDTO`（menu_id + perm_ids） |
@@ -49,7 +49,7 @@ User ──< rbac_user_roles >── Role ──< rbac_role_menus >── Menu �
 
 - **角色绑定菜单**：通过 `rbac_role_menus` 规范化中间表，取代 `MenuIDs` 字符串。
 - **权限点归属菜单（多对多）**：`RBACPermission` 与 `Menu` 通过 `rbac_menu_permissions(menu_id, permission_id)` 关联；**同一个权限点可绑定到多个菜单**，菜单也可包含多个权限点。
-- **路由权限点自动归属**：启动时 `SyncPermissions` 按路径前缀匹配菜单路径，将同一权限点插入其所匹配到的**所有**菜单的 `rbac_menu_permissions` 记录（匹配到多个则产生多条关联行）。
+- **路由权限点同步**：启动时 `SyncPermissions` 仅将注册的路由同步为 `rbac_permissions` 权限点（创建缺失项、更新描述），**不做菜单归属**；菜单与权限点的绑定由 `AssignPermissionsToMenu` 显式维护（菜单 path 为前端路由、接口 path 为后端 API，二者无必然前缀关系，按前缀猜测会污染关联数据）。
 - **用户权限校验链路**：`User → Role → Menu → Permission → 接口鉴权`。
 - **超级管理员**：跳过权限检查，保持现有逻辑不变。
 - **缓存**：键保持 `permissions:` + userID，内容仍为 `map[string]bool`，仅查询链路改变。
@@ -77,9 +77,9 @@ for _, role := range user.Roles {
 
 ### 5.2 权限点菜单归属策略（多对多）
 
-`SyncPermissions` 写入 `rbac_permissions` 时，将权限点 `Path`（如 `/api/menu`）与 `sys_menus` 各菜单的 `Path` 做前缀匹配。**一个权限点可能匹配到多个菜单前缀**，因此需为每一个命中的菜单生成一条 `rbac_menu_permissions` 关联记录（菜单维度去重，避免重复行）；完全无法匹配（如 `/auth/login`）则不打任何关联，表示全局/未分类权限（仍可被超管或显式绑定访问）。
+菜单与权限点的绑定**不**由 `SyncPermissions` 自动推断。`SyncPermissions` 仅负责将注册的路由同步为 `rbac_permissions` 权限点（创建缺失项、更新描述），因为菜单 `Path`（前端路由，如 `/system/dept`）与接口 `Path`（后端 API，如 `/api/department/tree`）没有必然的前缀关系，按前缀猜测会污染 `rbac_menu_permissions` 关联数据、导致 RBAC 权限判定失真。
 
-手动维护入口：`AssignPermissionsToMenu(menuID, permIDs)`，支持把同一个权限点批量绑定到多个菜单；调用前先 `Replace` 该菜单已有关联，幂等安全。
+归属关系统一由手动/前端维护入口 `AssignPermissionsToMenu(menuID, permIDs)` 控制，支持把同一个权限点批量绑定到多个菜单；调用前先 `Replace` 该菜单已有关联，幂等安全。
 
 ### 5.3 数据迁移策略
 
@@ -89,7 +89,7 @@ for _, role := range user.Roles {
 
 **Step 2 — 迁移历史数据**
 - 解析每个 `RBACRole.MenuIDs` 字符串（如 `"3,4,5"`），拆解后逐条插入 `rbac_role_menus`
-- 运行 `SyncPermissions` 让权限点按前缀自动匹配并写入 `rbac_menu_permissions`（支持一权限多菜单）
+- 运行 `SyncPermissions` 仅同步权限点本身（`rbac_permissions`），菜单-权限绑定由 `AssignPermissionsToMenu` 单独维护
 
 **Step 3 — 清理旧结构**
 - 从 `RBACRole` 删除 `menu_ids` 列
@@ -99,16 +99,16 @@ for _, role := range user.Roles {
 **可执行迁移脚本（已生成）**
 - Go 一次性命令：`cmd/migrate_rbac/main.go`
   - 用法：`go run ./cmd/migrate_rbac -c ./config/config.yaml`
-  - 流程：AutoMigrate 建中间表 → 注册路由 + `SyncPermissions` 自动写入 `rbac_menu_permissions` → 迁移 `rbac_roles.menu_ids` 到 `rbac_role_menus` → 删除 `rbac_role_permissions` 表与 `menu_ids` 列。幂等、可重入。
+  - 流程：AutoMigrate 建中间表 → 注册路由 + `SyncPermissions` 仅同步权限点（`rbac_permissions`）→ 迁移 `rbac_roles.menu_ids` 到 `rbac_role_menus` → 删除 `rbac_role_permissions` 表与 `menu_ids` 列。幂等、可重入。菜单-权限绑定由 `AssignPermissionsToMenu` 维护。
 - SQL 脚本：`internal/xdb/migrate/rbac_menu_migration.sql`
-  - 负责建表 + 角色菜单数据搬运（含 MySQL/PostgreSQL 分支）+ 清理旧结构；权限-菜单归属由应用 `SyncPermissions` 自动完成。
+  - 负责建表 + 角色菜单数据搬运（含 MySQL/PostgreSQL 分支）+ 清理旧结构；权限-菜单归属由应用 `AssignPermissionsToMenu` 维护，不依赖 `SyncPermissions` 前缀匹配。
 
 ## 6. 关键决策与权衡
 
 | 决策 | 选择 | 理由 |
 | --- | --- | --- |
 | 权限-菜单关系 | **多对多**（`rbac_menu_permissions` 中间表） | 同一权限点需可绑定到多个菜单，单外键 `menu_id` 无法满足 |
-| 权限点归属方式 | Auto-sync 时按路径前缀自动匹配，可命中多菜单 | 免手动维护菜单-权限关系，降低管理负担 |
+| 权限点归属方式 | 由 `AssignPermissionsToMenu` 显式维护，不依赖路径前缀自动匹配 | 菜单 path（前端路由）与接口 path（后端 API）无必然前缀关系，自动匹配会污染 `rbac_menu_permissions`；`SyncPermissions` 仅同步权限点本身 |
 | 角色绑菜单方式 | `rbac_role_menus` 中间表 | 规范化多对多，优于逗号分隔字符串 |
 | 是否保留 `RBACRolePermission` | 彻底移除 | 消除双轨冗余，角色权限来源唯一（经菜单间接获得） |
 | 旧数据兼容 | 提供迁移脚本，不保留 `MenuIDs` 列 | 一次迁移干净，避免遗留技术债 |

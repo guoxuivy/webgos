@@ -6,7 +6,7 @@
 //
 // 执行步骤：
 //   1. 加载配置 + 初始化 DB + AutoMigrate（自动建 rbac_role_menus / rbac_menu_permissions）
-//   2. 注册路由并同步权限点（SyncPermissions 按路径前缀写入 rbac_menu_permissions）
+//   2. 注册路由并同步权限点（SyncPermissions 仅同步权限点本身，菜单-权限绑定由 AssignPermissionsToMenu 维护）
 //   3. 迁移历史：rbac_roles.menu_ids 字符串 -> rbac_role_menus 中间表
 //   4. 清理：删除 rbac_role_permissions 表、rbac_roles.menu_ids 列
 package main
@@ -49,12 +49,12 @@ func main() {
 	}
 	xlog.Access("[migrate] 中间表已就绪 (rbac_role_menus / rbac_menu_permissions)")
 
-	// 2. 注册路由并同步权限点 -> 自动写入 rbac_menu_permissions（按路径前缀匹配，支持一权限多菜单）
+	// 2. 注册路由并同步权限点（仅创建/更新权限点，不自动归属菜单）
 	routes.New(config.GlobalConfig)
 	if err := routes.SyncPermissions(db); err != nil {
 		panic("failed to sync permissions: " + err.Error())
 	}
-	xlog.Access("[migrate] 权限点已同步并归属菜单 (rbac_menu_permissions)")
+	xlog.Access("[migrate] 权限点已同步 (rbac_permissions)；菜单-权限绑定请在前端/AssignPermissionsToMenu 维护")
 
 	// 3. 迁移历史：rbac_roles.menu_ids 字符串 -> rbac_role_menus
 	if err := migrateRoleMenuIDs(db); err != nil {
@@ -101,7 +101,7 @@ func migrateRoleMenuIDs(db *gorm.DB) error {
 			}
 			// 菜单是否存在
 			var cnt int64
-			if err := db.Table("sys_menus").Where("id = ?", menuID).Count(&cnt).Error; err != nil || cnt == 0 {
+			if err := db.Table("menus").Where("id = ?", menuID).Count(&cnt).Error; err != nil || cnt == 0 {
 				continue
 			}
 			// 关联是否已存在
@@ -143,12 +143,12 @@ func cleanup(db *gorm.DB) error {
 		}
 	}
 
-	// 删除 sys_menus.auth_code 列（权限标识功能已移除）
+	// 删除 menus.auth_code 列（权限标识功能已移除）
 	if db.Migrator().HasColumn(&models.Menu{}, "auth_code") {
 		if err := db.Migrator().DropColumn(&models.Menu{}, "auth_code"); err != nil {
 			xlog.Access("[migrate] 删除列 auth_code 失败（可忽略，手动 DROP 亦可）：%v", err)
 		} else {
-			xlog.Access("[migrate] 已删除 sys_menus.auth_code 列")
+			xlog.Access("[migrate] 已删除 menus.auth_code 列")
 		}
 	}
 	return nil
