@@ -157,5 +157,17 @@ func (s *departmentService) RemoveUser(userID int) error {
 		return errors.New("用户不存在")
 	}
 
-	return xdb.GetDB().Model(&models.User{}).Where("id = ?", userID).Update("department_id", 0).Error
+	db := xdb.GetDB()
+
+	// 如果该用户是其所属部门的负责人，先将对应部门的负责人置空
+	if user.DepartmentID != 0 {
+		if err := db.Model(&models.Department{}).
+			Where("id = ? AND leader_id = ?", user.DepartmentID, userID).
+			Update("leader_id", nil).Error; err != nil {
+			return err
+		}
+	}
+
+	// 再将用户移出部门
+	return db.Model(&models.User{}).Where("id = ?", userID).Update("department_id", 0).Error
 }
