@@ -4,14 +4,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"webgos/internal/cache"
 	"webgos/internal/config"
-	"webgos/internal/xdb"
 	"webgos/internal/models"
 	"webgos/internal/utils/response"
+	"webgos/internal/xdb"
 
 	"github.com/gin-gonic/gin"
-
-	"webgos/internal/cache"
 )
 
 // RBAC 中间件用于检查用户权限 RBAC 通过路由节点自动检查
@@ -76,7 +75,6 @@ func RBAC() gin.HandlerFunc {
 		currentPath := strings.ToLower(c.FullPath())
 		currentMethod := strings.ToUpper(c.Request.Method)
 		requiredPermission := currentPath + ":" + currentMethod
-
 		if permissions[requiredPermission] {
 			c.Next()
 		} else {

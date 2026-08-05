@@ -6,7 +6,7 @@ type RBACRole struct {
 	Remark      string    `gorm:"size:200" json:"remark"`
 	Status      int       `gorm:"type:tinyint;default:1;comment:状态 0-禁用 1-启用" json:"status"`
 	Users       []User    `gorm:"many2many:rbac_user_roles;" json:"-"`
-	Menus       []Menu    `gorm:"many2many:rbac_role_menus;" json:"-"`
+	Menus       []Menu    `gorm:"many2many:rbac_role_menus" json:"-"`
 	MenuIDs     []int     `gorm:"-" json:"menu_ids"`
 }
 
@@ -20,7 +20,7 @@ type RBACPermission struct {
 	Description string    `gorm:"size:200" json:"description"`
 	Path        string    `gorm:"size:255" json:"path"`
 	Method      string    `gorm:"size:20" json:"method"`
-	Menus       []Menu    `gorm:"many2many:rbac_menu_permissions;" json:"menus"`
+	Menus       []Menu    `gorm:"many2many:rbac_menu_permissions" json:"menus"`
 }
 
 type RBACUserRole struct {

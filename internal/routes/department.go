@@ -2,6 +2,7 @@ package routes
 
 import (
 	"webgos/internal/handlers"
+	"webgos/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +12,8 @@ func init() {
 		api := router.Group("/api")
 
 		department := WrapRouter(api.Group("/department"))
+		department.Use(middleware.JWT())
+		department.Use(middleware.RBAC())
 		{
 			department.POST("", "创建部门", handlers.CreateDepartment)
 			department.PUT("", "更新部门", handlers.UpdateDepartment)

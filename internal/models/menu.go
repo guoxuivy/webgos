@@ -12,7 +12,7 @@ type Menu struct {
 	Meta      MenuMeta `gorm:"embedded" json:"meta"`
 	Pid       int             `gorm:"comment:父级菜单ID" json:"pid"`
 	Children  []Menu           `gorm:"-" json:"children,omitempty"`
-	Permissions []RBACPermission `gorm:"many2many:rbac_menu_permissions;" json:"permissions"`
+	Permissions []RBACPermission `gorm:"many2many:rbac_menu_permissions" json:"permissions"`
 }
 
 type MenuMeta struct {
@@ -35,5 +35,5 @@ type MenuMeta struct {
 }
 
 func (Menu) TableName() string {
-	return "sys_menus"
+	return "menus"
 }
