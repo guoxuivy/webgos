@@ -88,8 +88,8 @@ func (s *departmentService) Update(dtoModel dto.EditDepartmentDTO) error {
 	if dtoModel.Status != nil {
 		department.Status = *dtoModel.Status
 	}
-	if dtoModel.Order != nil {
-		department.Sort = *dtoModel.Order
+	if dtoModel.Sort != nil {
+		department.Sort = *dtoModel.Sort
 	}
 
 	return xdb.GetDB().Select("*").Updates(&department).Error

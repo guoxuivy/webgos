@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"webgos/internal/config"
-	"webgos/internal/xdb"
 	"webgos/internal/dto"
 	"webgos/internal/models"
+	"webgos/internal/xdb"
 
 	"gorm.io/gorm"
 )
@@ -111,7 +111,7 @@ func (s *menuService) GetAllMenus() ([]models.Menu, error) {
 
 func (s *menuService) GetMenuTree() ([]models.Menu, error) {
 	var menus []models.Menu
-	if err := xdb.GetDB().Order("`order` ASC").Find(&menus).Error; err != nil {
+	if err := xdb.GetDB().Order("sort ASC").Find(&menus).Error; err != nil {
 		return nil, err
 	}
 
@@ -180,7 +180,7 @@ func (s *menuService) GetUserMenus(userID int) ([]models.Menu, error) {
 	}
 
 	var menus []models.Menu
-	if err := db.Order("`order` ASC").Find(&menus).Error; err != nil {
+	if err := db.Order("sort ASC").Find(&menus).Error; err != nil {
 		return nil, err
 	}
 
