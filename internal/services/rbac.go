@@ -243,3 +243,12 @@ func InvalidateRolePermissionCache(roleID int) {
 		InvalidateUserPermissionCache(uid)
 	}
 }
+
+// InvalidateMenuPermissionCache 失效绑定了指定菜单的角色下所有用户的权限缓存
+func InvalidateMenuPermissionCache(menuID int) {
+	var roleIDs []int
+	xdb.GetDB().Table("rbac_role_menus").Where("menu_id = ?", menuID).Pluck("rbac_role_id", &roleIDs)
+	for _, rid := range roleIDs {
+		InvalidateRolePermissionCache(rid)
+	}
+}

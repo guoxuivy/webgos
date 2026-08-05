@@ -34,7 +34,6 @@ func RBAC() gin.HandlerFunc {
 		cacheKey := cache.PermissionPrefix + ":" + strconv.Itoa(userID)
 		userPermissions, found := cache.GetCache().Get(cacheKey)
 		var permissions map[string]bool
-
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User

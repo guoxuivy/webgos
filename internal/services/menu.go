@@ -207,9 +207,15 @@ func (s *menuService) AssignPermissionsToMenu(menuID int, permissionIDs []int) e
 		}
 	}
 
-	return xdb.GetDB().Transaction(func(tx *gorm.DB) error {
+	if err := xdb.GetDB().Transaction(func(tx *gorm.DB) error {
 		return tx.Model(&menu).Association("Permissions").Replace(permissions)
-	})
+	}); err != nil {
+		return err
+	}
+
+	// 菜单-权限变更后，失效绑定了该菜单的角色下所有用户的权限缓存
+	InvalidateMenuPermissionCache(menuID)
+	return nil
 }
 
 func setRedirectForMenus(menus []models.Menu) {
