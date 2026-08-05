@@ -26,7 +26,7 @@ func RBAC() gin.HandlerFunc {
 
 		userID := c.GetInt("user_id")
 		if userID == 0 {
-			response.AuthError(c, "缺少用户信息")
+			response.Unauthorized(c, "缺少用户信息")
 			return
 		}
 
@@ -38,7 +38,7 @@ func RBAC() gin.HandlerFunc {
 			// 缓存未命中，查询数据库
 			var user models.User
 			if err := xdb.GetDB().Preload("Roles.Menus.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
-				response.AuthError(c, "用户不存在")
+				response.Unauthorized(c, "用户不存在")
 				return
 			}
 			// 超管跳过权限检查
@@ -64,7 +64,7 @@ func RBAC() gin.HandlerFunc {
 			if !ok {
 				// 缓存类型错误，重新查询或拒绝请求
 				cache.GetCache().Delete(cacheKey)
-				response.AuthError(c, "权限验证失败")
+				response.Unauthorized(c, "权限验证失败")
 				return
 			}
 			permissions = permissionsMap

@@ -42,14 +42,21 @@ func ErrorWithCode(c *gin.Context, msg string, errCode int) {
 	Resp(c, errCode, msg, "")
 }
 
-// 用户登录错误
-func AuthError(c *gin.Context, msg string) {
-	c.AbortWithStatusJSON(http.StatusUnauthorized, msg)
+// 使用http code
+// 未认证错误（HTTP 401）：未携带/无效令牌、用户不存在等
+func Unauthorized(c *gin.Context, msg string) {
+	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+		"code":    http.StatusUnauthorized,
+		"message": msg,
+	})
 }
 
 // 权限不足错误
 func Forbidden(c *gin.Context, msg string) {
-	c.AbortWithStatusJSON(http.StatusForbidden, msg)
+	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+		"code":    http.StatusForbidden,
+		"message": msg,
+	})
 }
 
 // GetRequestID 从上下文中获取RequestID

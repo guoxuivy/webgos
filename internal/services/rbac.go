@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"webgos/internal/cache"
-	"webgos/internal/xdb"
 	"webgos/internal/dto"
 	"webgos/internal/models"
+	"webgos/internal/xdb"
 
 	"gorm.io/gorm"
 )
@@ -238,7 +238,7 @@ func InvalidateUserPermissionCache(userID int) {
 // InvalidateRolePermissionCache 失效拥有指定角色的所有用户的权限缓存
 func InvalidateRolePermissionCache(roleID int) {
 	var userIDs []int
-	xdb.GetDB().Table("rbac_user_roles").Where("role_id = ?", roleID).Pluck("user_id", &userIDs)
+	xdb.GetDB().Table("rbac_user_roles").Where("rbac_role_id = ?", roleID).Pluck("user_id", &userIDs)
 	for _, uid := range userIDs {
 		InvalidateUserPermissionCache(uid)
 	}

@@ -13,14 +13,14 @@ func JWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.AuthError(c, "缺少认证令牌")
+			response.Unauthorized(c, "缺少认证令牌")
 			return
 		}
 
 		// 检查Bearer token格式
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			response.AuthError(c, "令牌格式错误")
+			response.Unauthorized(c, "令牌格式错误")
 			return
 		}
 
@@ -32,7 +32,7 @@ func JWT() gin.HandlerFunc {
 		service := services.NewAuthService()
 		claims, err := service.ValidateToken(tokenString)
 		if err != nil {
-			response.AuthError(c, err.Error())
+			response.Unauthorized(c, err.Error())
 			return
 		}
 

@@ -83,7 +83,7 @@ type ParkResp struct { models.Park; EnterpriseCount int `json:"enterpriseCount"`
 ```go
 response.Success(c, "消息", data)          // {"code":0,"message":"消息","data":...}
 response.Error(c, "错误信息")               // {"code":1,"message":"错误信息"}
-response.AuthError(c, "未认证")             // HTTP 401
+response.Unauthorized(c, "未认证")           // HTTP 401
 response.Forbidden(c, "无权限")              // HTTP 403
 response.ErrorWithCode(c, "消息", http.StatusNotFound)  // 自定义状态码
 ```
