@@ -29,7 +29,7 @@ func Login(c *gin.Context) {
 	}
 
 	service := services.NewAuthService()
-	token, err := service.Login(userLoginDTO.Username, userLoginDTO.Password)
+	token, err := service.Login(c, userLoginDTO.Username, userLoginDTO.Password)
 	if err != nil {
 		response.Error(c, err.Error())
 		return
@@ -74,7 +74,7 @@ func ResetPassword(c *gin.Context) {
 	}
 
 	userService := services.NewUserService()
-	err := userService.ResetPassword(userLoginDTO.Username, userLoginDTO.Password)
+	err := userService.ResetPassword(c, userLoginDTO.Username, userLoginDTO.Password)
 	if err != nil {
 		response.Error(c, err.Error())
 		return
@@ -102,7 +102,7 @@ func RegisterUser(c *gin.Context) {
 
 	user := userRegisterDTO.ToModel()
 	userService := services.NewUserService()
-	if err := userService.CreateOrUpdateUser(&user); err != nil {
+	if err := userService.CreateOrUpdateUser(c, &user); err != nil {
 		response.Error(c, err.Error())
 		return
 	}

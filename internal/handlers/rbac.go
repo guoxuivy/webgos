@@ -29,7 +29,7 @@ func AddRole(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	role, err := rbacService.AddRole(dtoModel)
+	role, err := rbacService.AddRole(c, dtoModel)
 	if err != nil {
 		response.Error(c, "创建角色失败: "+err.Error())
 		return
@@ -57,7 +57,7 @@ func EditRole(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	err := rbacService.EditRole(dtoModel)
+	err := rbacService.EditRole(c, dtoModel)
 	if err != nil {
 		response.Error(c, "编辑角色失败: "+err.Error())
 		return
@@ -85,7 +85,7 @@ func AssignRoles(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	err := rbacService.AssignRolesToUser(dtoModel.UserID, dtoModel.RoleIDs)
+	err := rbacService.AssignRolesToUser(c, dtoModel.UserID, dtoModel.RoleIDs)
 	if err != nil {
 		response.Error(c, "分配角色失败: "+err.Error())
 		return
@@ -114,7 +114,7 @@ func AssignMenus(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	err := rbacService.AssignMenusToRole(dtoModel.RoleID, dtoModel.MenuIDs)
+	err := rbacService.AssignMenusToRole(c, dtoModel.RoleID, dtoModel.MenuIDs)
 	if err != nil {
 		response.Error(c, "分配菜单失败: "+err.Error())
 		return
@@ -143,7 +143,7 @@ func GetRoleByID(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	role, err := rbacService.GetRoleByID(dtoModel.ID)
+	role, err := rbacService.GetRoleByID(c, dtoModel.ID)
 	if err != nil {
 		response.Error(c, "获取角色失败: "+err.Error())
 		return
@@ -172,7 +172,7 @@ func GetUserRoles(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	roles, err := rbacService.GetUserRoles(dtoModel.UserID)
+	roles, err := rbacService.GetUserRoles(c, dtoModel.UserID)
 	if err != nil {
 		response.Error(c, "获取用户角色失败: "+err.Error())
 		return
@@ -193,7 +193,7 @@ func GetUserRoles(c *gin.Context) {
 // @Security BearerAuth
 func GetRoles(c *gin.Context) {
 	rbacService := services.NewRBACService()
-	roles, err := rbacService.GetRoles()
+	roles, err := rbacService.GetRoles(c)
 	if err != nil {
 		response.Error(c, "获取角色列表失败: "+err.Error())
 		return
@@ -214,7 +214,7 @@ func GetRoles(c *gin.Context) {
 // @Security BearerAuth
 func GetPermissions(c *gin.Context) {
 	rbacService := services.NewRBACService()
-	permissions, err := rbacService.GetPermissions()
+	permissions, err := rbacService.GetPermissions(c)
 	if err != nil {
 		response.Error(c, "获取权限项列表失败: "+err.Error())
 		return
@@ -240,7 +240,7 @@ func DeletePermission(c *gin.Context) {
 		return
 	}
 	rbacService := services.NewRBACService()
-	err := rbacService.DeletePermission(dtoModel.ID)
+	err := rbacService.DeletePermission(c, dtoModel.ID)
 	if err != nil {
 		response.Error(c, "删除权限失败: "+err.Error())
 		return
@@ -268,7 +268,7 @@ func GetRolePermissions(c *gin.Context) {
 	}
 
 	rbacService := services.NewRBACService()
-	permissions, err := rbacService.GetRolePermissions(dtoModel.RoleID)
+	permissions, err := rbacService.GetRolePermissions(c, dtoModel.RoleID)
 	if err != nil {
 		response.Error(c, "获取角色权限列表失败: "+err.Error())
 		return

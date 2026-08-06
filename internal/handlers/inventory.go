@@ -28,7 +28,7 @@ func ProductIn(c *gin.Context) {
 	}
 
 	inventoryService := services.NewInventoryService()
-	if err := inventoryService.ProductIn(&record); err != nil {
+	if err := inventoryService.ProductIn(c, &record); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -56,7 +56,7 @@ func ProductOut(c *gin.Context) {
 	}
 
 	inventoryService := services.NewInventoryService()
-	if err := inventoryService.ProductOut(&record); err != nil {
+	if err := inventoryService.ProductOut(c, &record); err != nil {
 		response.Error(c, err.Error())
 		return
 	}

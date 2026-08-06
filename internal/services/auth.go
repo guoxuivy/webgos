@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -8,12 +9,12 @@ import (
 
 	"webgos/internal/cache"
 	"webgos/internal/config"
-	"webgos/internal/xdb"
 	"webgos/internal/models"
+	"webgos/internal/xdb"
 )
 
 type AuthService interface {
-	Login(username, password string) (string, error)
+	Login(ctx context.Context, username, password string) (string, error)
 	ValidateToken(tokenString string) (*jwt.MapClaims, error)
 	Logout(tokenString string)
 }
@@ -24,11 +25,11 @@ func NewAuthService() AuthService {
 	return &authService{}
 }
 
-func (s *authService) Login(username, password string) (string, error) {
+func (s *authService) Login(ctx context.Context, username, password string) (string, error) {
 	jwtConfig := config.GlobalConfig.JWT
 
 	var user models.User
-	if err := xdb.GetDB().Where("username = ?", username).Take(&user).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Where("username = ?", username).Take(&user).Error; err != nil {
 		return "", errors.New("用户不存在")
 	}
 

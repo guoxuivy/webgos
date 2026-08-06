@@ -28,7 +28,7 @@ func AddProduct(c *gin.Context) {
 	}
 
 	productService := services.NewProductService()
-	if err := productService.CreateProduct(&product); err != nil {
+	if err := productService.CreateProduct(c, &product); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
@@ -49,7 +49,7 @@ func AddProduct(c *gin.Context) {
 func GetProductByID(c *gin.Context) {
 	idStr := c.Param("id")
 	productService := services.NewProductService()
-	product, err := productService.GetProductByID(idStr)
+	product, err := productService.GetProductByID(c, idStr)
 	if err != nil {
 		response.Error(c, "产品不存在")
 		return

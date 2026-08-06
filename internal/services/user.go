@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 
 	"webgos/internal/dto"
@@ -9,10 +10,10 @@ import (
 )
 
 type UserService interface {
-	CreateOrUpdateUser(user *models.User) error
-	ResetPassword(username, password string) error
-	UsersPage(query dto.UserQuery) ([]models.User, int64)
-	GetUserInfo(userID int) (*models.User, error)
+	CreateOrUpdateUser(ctx context.Context, user *models.User) error
+	ResetPassword(ctx context.Context, username, password string) error
+	UsersPage(ctx context.Context, query dto.UserQuery) ([]models.User, int64)
+	GetUserInfo(ctx context.Context, userID int) (*models.User, error)
 }
 
 type userService struct{}
@@ -21,24 +22,26 @@ func NewUserService() UserService {
 	return &userService{}
 }
 
-func (s *userService) CreateOrUpdateUser(user *models.User) error {
+func (s *userService) CreateOrUpdateUser(ctx context.Context, user *models.User) error {
 	if user.Password != "" {
 		if err := user.SetPassword(user.Password); err != nil {
 			return err
 		}
 	}
 
+	db := xdb.GetDB().WithContext(ctx)
+
 	if user.ID > 0 {
-		return xdb.GetDB().Updates(user).Error
+		return db.Updates(user).Error
 	}
 
-	return xdb.GetDB().Create(user).Error
+	return db.Create(user).Error
 }
 
-func (s *userService) ResetPassword(username, password string) error {
+func (s *userService) ResetPassword(ctx context.Context, username, password string) error {
 	var user models.User
 
-	if err := xdb.GetDB().Where("username = ?", username).Take(&user).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Where("username = ?", username).Take(&user).Error; err != nil {
 		return errors.New("用户不存在")
 	}
 
@@ -46,14 +49,14 @@ func (s *userService) ResetPassword(username, password string) error {
 		return err
 	}
 
-	return xdb.GetDB().Model(&user).Update("Password", user.Password).Error
+	return xdb.GetDB().WithContext(ctx).Model(&user).Update("Password", user.Password).Error
 }
 
-func (s *userService) UsersPage(query dto.UserQuery) ([]models.User, int64) {
+func (s *userService) UsersPage(ctx context.Context, query dto.UserQuery) ([]models.User, int64) {
 	var users []models.User
 	var total int64
 
-	db := xdb.GetDB().Model(&models.User{})
+	db := xdb.GetDB().WithContext(ctx).Model(&models.User{})
 
 	if query.Username != "" {
 		db = db.Where("username LIKE ?", "%"+query.Username+"%")
@@ -69,8 +72,8 @@ func (s *userService) UsersPage(query dto.UserQuery) ([]models.User, int64) {
 	return users, total
 }
 
-func (s *userService) GetUserInfo(userID int) (*models.User, error) {
+func (s *userService) GetUserInfo(ctx context.Context, userID int) (*models.User, error) {
 	var user models.User
-	err := xdb.GetDB().Preload("Roles").First(&user, userID).Error
+	err := xdb.GetDB().WithContext(ctx).Preload("Roles").First(&user, userID).Error
 	return &user, err
 }

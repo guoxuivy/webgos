@@ -31,7 +31,7 @@ func CreateDepartment(c *gin.Context) {
 	}
 
 	departmentService := services.NewDepartmentService()
-	department, err := departmentService.Create(dtoModel)
+	department, err := departmentService.Create(c, dtoModel)
 	if err != nil {
 		response.Error(c, "创建部门失败: "+err.Error())
 		return
@@ -60,7 +60,7 @@ func UpdateDepartment(c *gin.Context) {
 	}
 
 	departmentService := services.NewDepartmentService()
-	err := departmentService.Update(dtoModel)
+	err := departmentService.Update(c, dtoModel)
 	if err != nil {
 		response.Error(c, "更新部门失败: "+err.Error())
 		return
@@ -89,7 +89,7 @@ func DeleteDepartment(c *gin.Context) {
 	}
 
 	departmentService := services.NewDepartmentService()
-	err = departmentService.Delete(id)
+	err = departmentService.Delete(c, id)
 	if err != nil {
 		response.Error(c, "删除部门失败: "+err.Error())
 		return
@@ -110,7 +110,7 @@ func DeleteDepartment(c *gin.Context) {
 // @Security BearerAuth
 func GetDepartmentTree(c *gin.Context) {
 	departmentService := services.NewDepartmentService()
-	tree, err := departmentService.GetTree()
+	tree, err := departmentService.GetTree(c)
 	if err != nil {
 		response.Error(c, "获取部门树失败: "+err.Error())
 		return
@@ -145,7 +145,7 @@ func AddDepartmentUsers(c *gin.Context) {
 	}
 
 	departmentService := services.NewDepartmentService()
-	err = departmentService.AddUsers(id, dtoModel.UserIDs)
+	err = departmentService.AddUsers(c, id, dtoModel.UserIDs)
 	if err != nil {
 		response.Error(c, "添加用户失败: "+err.Error())
 		return
@@ -174,7 +174,7 @@ func RemoveDepartmentUser(c *gin.Context) {
 	}
 
 	departmentService := services.NewDepartmentService()
-	err = departmentService.RemoveUser(userID)
+	err = departmentService.RemoveUser(c, userID)
 	if err != nil {
 		response.Error(c, "移除用户失败: "+err.Error())
 		return

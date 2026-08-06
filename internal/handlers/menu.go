@@ -31,7 +31,7 @@ func AddMenu(c *gin.Context) {
 	}
 
 	menuService := services.NewMenuService()
-	menu, err := menuService.AddMenu(dtoModel)
+	menu, err := menuService.AddMenu(c, dtoModel)
 	if err != nil {
 		response.Error(c, "创建菜单失败: "+err.Error())
 		return
@@ -68,7 +68,7 @@ func EditMenu(c *gin.Context) {
 	}
 
 	menuService := services.NewMenuService()
-	if err := menuService.EditMenu(uri.ID, dtoModel); err != nil {
+	if err := menuService.EditMenu(c, uri.ID, dtoModel); err != nil {
 		response.Error(c, "编辑菜单失败: "+err.Error())
 		return
 	}
@@ -91,7 +91,7 @@ func DeleteMenu(c *gin.Context) {
 	// 创建菜单服务
 	menuService := services.NewMenuService()
 	// 删除菜单
-	if err := menuService.DeleteMenu(ID); err != nil {
+	if err := menuService.DeleteMenu(c, ID); err != nil {
 		response.Error(c, "删除菜单失败: "+err.Error())
 		return
 	}
@@ -114,7 +114,7 @@ func GetMenu(c *gin.Context) {
 	// 创建菜单服务
 	menuService := services.NewMenuService()
 	// 获取菜单
-	menu, err := menuService.GetMenuByID(ID)
+	menu, err := menuService.GetMenuByID(c, ID)
 	if err != nil {
 		response.Error(c, "获取菜单失败: "+err.Error())
 		return
@@ -137,7 +137,7 @@ func GetMenus(c *gin.Context) {
 	menuService := services.NewMenuService()
 
 	// 获取所有菜单
-	menus, err := menuService.GetAllMenus()
+	menus, err := menuService.GetAllMenus(c)
 	if err != nil {
 		response.Error(c, "获取菜单列表失败: "+err.Error())
 		return
@@ -160,7 +160,7 @@ func GetMenuTree(c *gin.Context) {
 	menuService := services.NewMenuService()
 
 	// 获取菜单树
-	menuTree, err := menuService.GetMenuTree()
+	menuTree, err := menuService.GetMenuTree(c)
 	if err != nil {
 		response.Error(c, "获取菜单树失败: "+err.Error())
 		return
@@ -205,10 +205,10 @@ func NameExists(c *gin.Context) {
 		}
 
 		// 检查名称是否存在（排除指定ID）
-		exists, _ = menuService.IsNameExists(name, menuID)
+		exists, _ = menuService.IsNameExists(c, name, menuID)
 	} else {
 		// 检查名称是否存在
-		exists, err = menuService.IsNameExists(name)
+		exists, err = menuService.IsNameExists(c, name)
 	}
 
 	if err != nil {
@@ -253,10 +253,10 @@ func PathExists(c *gin.Context) {
 			return
 		}
 		// 检查路径是否存在（排除指定ID）
-		exists, _ = menuService.IsPathExists(path, menuID)
+		exists, _ = menuService.IsPathExists(c, path, menuID)
 	} else {
 		// 检查路径是否存在
-		exists, err = menuService.IsPathExists(path)
+		exists, err = menuService.IsPathExists(c, path)
 	}
 
 	if err != nil {
@@ -289,7 +289,7 @@ func GetUserMenus(c *gin.Context) {
 	menuService := services.NewMenuService()
 
 	// 获取用户菜单
-	menus, err := menuService.GetUserMenus(userID)
+	menus, err := menuService.GetUserMenus(c, userID)
 	if err != nil {
 		response.Error(c, "获取用户菜单失败: "+err.Error())
 		return
@@ -315,12 +315,12 @@ func GetMenuPermissions(c *gin.Context) {
 		return
 	}
 
-	if _, err := services.NewMenuService().GetMenuByID(menuID); err != nil {
+	if _, err := services.NewMenuService().GetMenuByID(c, menuID); err != nil {
 		response.Error(c, "菜单不存在")
 		return
 	}
 
-	perms, err := services.NewRBACService().GetMenuPermissions(menuID)
+	perms, err := services.NewRBACService().GetMenuPermissions(c, menuID)
 	if err != nil {
 		response.Error(c, "获取菜单权限失败: "+err.Error())
 		return
@@ -346,7 +346,7 @@ func AssignPermissionsToMenu(c *gin.Context) {
 	}
 
 	menuService := services.NewMenuService()
-	if err := menuService.AssignPermissionsToMenu(dtoModel.MenuID, dtoModel.PermissionIDs); err != nil {
+	if err := menuService.AssignPermissionsToMenu(c, dtoModel.MenuID, dtoModel.PermissionIDs); err != nil {
 		response.Error(c, "绑定菜单权限失败: "+err.Error())
 		return
 	}

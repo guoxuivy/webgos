@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -13,17 +14,17 @@ import (
 )
 
 type RBACService interface {
-	AddRole(dtoModel dto.AddRoleDTO) (*models.RBACRole, error)
-	EditRole(dtoModel dto.EditRoleDTO) error
-	AssignRolesToUser(userID int, roleIDs []int) error
-	AssignMenusToRole(roleID int, menuIDs []int) error
-	GetRoleByID(id int) (*models.RBACRole, error)
-	GetUserRoles(userID int) ([]models.RBACRole, error)
-	GetRoles() ([]models.RBACRole, error)
-	GetPermissions() ([]models.RBACPermission, error)
-	GetRolePermissions(roleID int) ([]models.RBACPermission, error)
-	GetMenuPermissions(menuID int) ([]models.RBACPermission, error)
-	DeletePermission(id int) error
+	AddRole(ctx context.Context, dtoModel dto.AddRoleDTO) (*models.RBACRole, error)
+	EditRole(ctx context.Context, dtoModel dto.EditRoleDTO) error
+	AssignRolesToUser(ctx context.Context, userID int, roleIDs []int) error
+	AssignMenusToRole(ctx context.Context, roleID int, menuIDs []int) error
+	GetRoleByID(ctx context.Context, id int) (*models.RBACRole, error)
+	GetUserRoles(ctx context.Context, userID int) ([]models.RBACRole, error)
+	GetRoles(ctx context.Context) ([]models.RBACRole, error)
+	GetPermissions(ctx context.Context) ([]models.RBACPermission, error)
+	GetRolePermissions(ctx context.Context, roleID int) ([]models.RBACPermission, error)
+	GetMenuPermissions(ctx context.Context, menuID int) ([]models.RBACPermission, error)
+	DeletePermission(ctx context.Context, id int) error
 }
 
 type rbacService struct{}
@@ -32,29 +33,29 @@ func NewRBACService() RBACService {
 	return &rbacService{}
 }
 
-func (s *rbacService) AddRole(dtoModel dto.AddRoleDTO) (*models.RBACRole, error) {
+func (s *rbacService) AddRole(ctx context.Context, dtoModel dto.AddRoleDTO) (*models.RBACRole, error) {
 	role := &models.RBACRole{
 		Name:   dtoModel.Name,
 		Remark: dtoModel.Remark,
 		Status: dtoModel.Status,
 	}
 
-	if err := xdb.GetDB().Create(role).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Create(role).Error; err != nil {
 		return nil, err
 	}
 
 	// 绑定菜单（多对多）
 	if len(dtoModel.MenuIDs) > 0 {
-		if err := s.AssignMenusToRole(role.ID, dtoModel.MenuIDs); err != nil {
+		if err := s.AssignMenusToRole(ctx, role.ID, dtoModel.MenuIDs); err != nil {
 			return nil, err
 		}
 	}
 	return role, nil
 }
 
-func (s *rbacService) EditRole(dtoModel dto.EditRoleDTO) error {
+func (s *rbacService) EditRole(ctx context.Context, dtoModel dto.EditRoleDTO) error {
 	var role models.RBACRole
-	if err := xdb.GetDB().First(&role, dtoModel.ID).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).First(&role, dtoModel.ID).Error; err != nil {
 		return err
 	}
 
@@ -67,26 +68,26 @@ func (s *rbacService) EditRole(dtoModel dto.EditRoleDTO) error {
 	if dtoModel.Status != nil {
 		role.Status = *dtoModel.Status
 	}
-	if err := xdb.GetDB().Select("*").Updates(&role).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Select("*").Updates(&role).Error; err != nil {
 		return err
 	}
 
 	if dtoModel.MenuIDs != nil {
-		if err := s.AssignMenusToRole(role.ID, dtoModel.MenuIDs); err != nil {
+		if err := s.AssignMenusToRole(ctx, role.ID, dtoModel.MenuIDs); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *rbacService) AssignRolesToUser(userID int, roleIDs []int) error {
+func (s *rbacService) AssignRolesToUser(ctx context.Context, userID int, roleIDs []int) error {
 	var user models.User
-	if err := xdb.GetDB().First(&user, userID).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).First(&user, userID).Error; err != nil {
 		return errors.New("用户不存在")
 	}
 
 	var roles []models.RBACRole
-	if err := xdb.GetDB().Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error; err != nil {
 		return errors.New("查询角色时出错")
 	}
 
@@ -94,26 +95,26 @@ func (s *rbacService) AssignRolesToUser(userID int, roleIDs []int) error {
 		return errors.New("部分角色不存在")
 	}
 
-	if err := xdb.GetDB().Transaction(func(tx *gorm.DB) error {
+	if err := xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return tx.Model(&user).Association("Roles").Replace(roles)
 	}); err != nil {
 		return err
 	}
 
 	// 角色变更后失效该用户的权限缓存
-	InvalidateUserPermissionCache(userID)
+	InvalidateUserPermissionCache(ctx, userID)
 	return nil
 }
 
-func (s *rbacService) AssignMenusToRole(roleID int, menuIDs []int) error {
+func (s *rbacService) AssignMenusToRole(ctx context.Context, roleID int, menuIDs []int) error {
 	var role models.RBACRole
-	if err := xdb.GetDB().First(&role, roleID).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).First(&role, roleID).Error; err != nil {
 		return errors.New("角色不存在")
 	}
 
 	var menus []models.Menu
 	if len(menuIDs) > 0 {
-		if err := xdb.GetDB().Where("id IN ?", menuIDs).Find(&menus).Error; err != nil {
+		if err := xdb.GetDB().WithContext(ctx).Where("id IN ?", menuIDs).Find(&menus).Error; err != nil {
 			return errors.New("查询菜单时出错")
 		}
 		if len(menus) != len(menuIDs) {
@@ -121,20 +122,20 @@ func (s *rbacService) AssignMenusToRole(roleID int, menuIDs []int) error {
 		}
 	}
 
-	if err := xdb.GetDB().Transaction(func(tx *gorm.DB) error {
+	if err := xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return tx.Model(&role).Association("Menus").Replace(menus)
 	}); err != nil {
 		return err
 	}
 
 	// 菜单变更后失效拥有该角色的所有用户的权限缓存
-	InvalidateRolePermissionCache(roleID)
+	InvalidateRolePermissionCache(ctx, roleID)
 	return nil
 }
 
-func (s *rbacService) GetRoleByID(id int) (*models.RBACRole, error) {
+func (s *rbacService) GetRoleByID(ctx context.Context, id int) (*models.RBACRole, error) {
 	var role models.RBACRole
-	if err := xdb.GetDB().Preload("Menus").First(&role, id).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Preload("Menus").First(&role, id).Error; err != nil {
 		return nil, err
 	}
 
@@ -142,9 +143,9 @@ func (s *rbacService) GetRoleByID(id int) (*models.RBACRole, error) {
 	return &role, nil
 }
 
-func (s *rbacService) GetUserRoles(userID int) ([]models.RBACRole, error) {
+func (s *rbacService) GetUserRoles(ctx context.Context, userID int) ([]models.RBACRole, error) {
 	var user models.User
-	if err := xdb.GetDB().Preload("Roles.Menus").First(&user, userID).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -155,9 +156,9 @@ func (s *rbacService) GetUserRoles(userID int) ([]models.RBACRole, error) {
 	return user.Roles, nil
 }
 
-func (s *rbacService) GetRoles() ([]models.RBACRole, error) {
+func (s *rbacService) GetRoles(ctx context.Context) ([]models.RBACRole, error) {
 	var roles []models.RBACRole
-	if err := xdb.GetDB().Preload("Menus").Find(&roles).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Preload("Menus").Find(&roles).Error; err != nil {
 		return nil, err
 	}
 
@@ -177,15 +178,15 @@ func menuIDsOf(menus []models.Menu) []int {
 	return ids
 }
 
-func (s *rbacService) GetPermissions() ([]models.RBACPermission, error) {
+func (s *rbacService) GetPermissions(ctx context.Context) ([]models.RBACPermission, error) {
 	var permissions []models.RBACPermission
-	err := xdb.GetDB().Find(&permissions).Error
+	err := xdb.GetDB().WithContext(ctx).Find(&permissions).Error
 	return permissions, err
 }
 
-func (s *rbacService) GetRolePermissions(roleID int) ([]models.RBACPermission, error) {
+func (s *rbacService) GetRolePermissions(ctx context.Context, roleID int) ([]models.RBACPermission, error) {
 	var role models.RBACRole
-	if err := xdb.GetDB().Preload("Menus.Permissions").First(&role, roleID).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Preload("Menus.Permissions").First(&role, roleID).Error; err != nil {
 		return nil, err
 	}
 
@@ -204,21 +205,21 @@ func (s *rbacService) GetRolePermissions(roleID int) ([]models.RBACPermission, e
 }
 
 // GetMenuPermissions 获取菜单绑定的权限点列表（多对多）
-func (s *rbacService) GetMenuPermissions(menuID int) ([]models.RBACPermission, error) {
+func (s *rbacService) GetMenuPermissions(ctx context.Context, menuID int) ([]models.RBACPermission, error) {
 	var menu models.Menu
-	if err := xdb.GetDB().Preload("Permissions").First(&menu, menuID).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).Preload("Permissions").First(&menu, menuID).Error; err != nil {
 		return nil, err
 	}
 	return menu.Permissions, nil
 }
 
-func (s *rbacService) DeletePermission(id int) error {
+func (s *rbacService) DeletePermission(ctx context.Context, id int) error {
 	var permission models.RBACPermission
-	if err := xdb.GetDB().First(&permission, id).Error; err != nil {
+	if err := xdb.GetDB().WithContext(ctx).First(&permission, id).Error; err != nil {
 		return errors.New("权限不存在")
 	}
 
-	if err := xdb.GetDB().Transaction(func(tx *gorm.DB) error {
+	if err := xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 清除权限点-菜单关联
 		if err := tx.Model(&permission).Association("Menus").Clear(); err != nil {
 			return err
@@ -231,24 +232,24 @@ func (s *rbacService) DeletePermission(id int) error {
 }
 
 // InvalidateUserPermissionCache 失效指定用户的权限缓存
-func InvalidateUserPermissionCache(userID int) {
+func InvalidateUserPermissionCache(ctx context.Context, userID int) {
 	cache.GetCache().Delete(cache.PermissionPrefix + ":" + strconv.Itoa(userID))
 }
 
 // InvalidateRolePermissionCache 失效拥有指定角色的所有用户的权限缓存
-func InvalidateRolePermissionCache(roleID int) {
+func InvalidateRolePermissionCache(ctx context.Context, roleID int) {
 	var userIDs []int
-	xdb.GetDB().Table("rbac_user_roles").Where("rbac_role_id = ?", roleID).Pluck("user_id", &userIDs)
+	xdb.GetDB().WithContext(ctx).Table("rbac_user_roles").Where("rbac_role_id = ?", roleID).Pluck("user_id", &userIDs)
 	for _, uid := range userIDs {
-		InvalidateUserPermissionCache(uid)
+		InvalidateUserPermissionCache(ctx, uid)
 	}
 }
 
 // InvalidateMenuPermissionCache 失效绑定了指定菜单的角色下所有用户的权限缓存
-func InvalidateMenuPermissionCache(menuID int) {
+func InvalidateMenuPermissionCache(ctx context.Context, menuID int) {
 	var roleIDs []int
-	xdb.GetDB().Table("rbac_role_menus").Where("menu_id = ?", menuID).Pluck("rbac_role_id", &roleIDs)
+	xdb.GetDB().WithContext(ctx).Table("rbac_role_menus").Where("menu_id = ?", menuID).Pluck("rbac_role_id", &roleIDs)
 	for _, rid := range roleIDs {
-		InvalidateRolePermissionCache(rid)
+		InvalidateRolePermissionCache(ctx, rid)
 	}
 }

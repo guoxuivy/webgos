@@ -21,7 +21,7 @@ import (
 // @Security BearerAuth
 func UserInfo(c *gin.Context) {
 	userService := services.NewUserService()
-	user, err := userService.GetUserInfo(c.GetInt("user_id"))
+	user, err := userService.GetUserInfo(c, c.GetInt("user_id"))
 	if err != nil {
 		response.Error(c, "获取用户信息失败")
 		return
@@ -47,7 +47,7 @@ func UsersList(c *gin.Context) {
 		return
 	}
 	userService := services.NewUserService()
-	items, total := userService.UsersPage(queryDTO)
+	items, total := userService.UsersPage(c, queryDTO)
 	response.Success(c, "获取用户列表成功", gin.H{"items": items, "total": total})
 }
 
@@ -73,14 +73,14 @@ func UserEdit(c *gin.Context) {
 	user := userRegisterDTO.ToModel()
 	user.ID = userRegisterDTO.ID
 	userService := services.NewUserService()
-	if err := userService.CreateOrUpdateUser(&user); err != nil {
+	if err := userService.CreateOrUpdateUser(c, &user); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
 	roleIds := userRegisterDTO.RoleIds
 	if roleIds != nil {
 		rbacService := services.NewRBACService()
-		err := rbacService.AssignRolesToUser(user.ID, roleIds)
+		err := rbacService.AssignRolesToUser(c, user.ID, roleIds)
 		if err != nil {
 			response.Error(c, "分配角色失败: "+err.Error())
 			return
