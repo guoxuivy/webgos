@@ -19,6 +19,14 @@ internal/
 └── utils/         # 工具类（response/param/cache）
 ```
 
+### 中间件（`internal/middleware/`）
+
+- **全局中间件**（在 `middleware.ApplyMiddlewares` 注册，顺序）：`IPBlacklist`（IP 黑名单拦截，最高优先级）→ `RequestID` → `Recovery` → `Logging` → `CORS` → `Gzip`
+- **安全防范**：`CheckSensitivePath` 在 404 handler 中调用，检测 `.env`/`.git`/phpmyadmin 等敏感路径与 `/shell`、`/exec` 等危险关键字，1 小时内命中 5 次自动将该 IP 加入黑名单（`blacklist.json` 持久化）
+- **IP 限流**：`IPLimiter(rate, capacity)` 基于令牌桶，每个 IP 独立限流，用于登录等高风险路由防爆破（如 `IPLimiter(1, 1)`）
+- **路由分组中间件**：`JWT`（登录态校验）、`Auth`（RBAC 权限验证）、`Debounce`（防重复提交）
+
+
 ## 分层架构：Routes → Handlers → Services → Models → DTO
 
 ## 核心模式
@@ -46,6 +54,8 @@ type Park struct {
 - 事务：`xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error { ... })`
 
 **约定**：所有 Service 方法第一个参数为 `ctx context.Context`，用于请求级超时与取消。
+
+Handler 调用 Service 时直接传入 `c *gin.Context` 即可——`gin.Context` 实现了 `context.Context` 接口，无需额外取 `c.Request.Context()`。例如：`services.NewXxxService().XxxsPage(c, query)`。Service 层内部一律通过 `xdb.GetDB().WithContext(ctx)` 使用上下文，不直接引用 `*gin.Context`，因此 Service 与 Gin 保持解耦，可独立测试。
 
 ### 2. Service 接口模式
 
@@ -159,7 +169,7 @@ func XxxList(c *gin.Context) {
 ## 注意事项
 
 1. **DTO可选字段用指针类型**：`*string`, `*int64`
-2. **Service方法始终接收context.Context**
+2. **Service方法始终接收context.Context**（首参数），Handler 直接传 `c` 即可
 3. **JSONB字段**：保存前调`Serialize()`，读取后调`Deserialize()`
 4. **增删改后清除缓存**：`cache.GetCache().DeleteByPrefix(...)`
 5. **错误统一用response返回**，不要直接return

@@ -135,17 +135,17 @@ func (s *entityNameService) SaveEntity(ctx context.Context, entity *models.Entit
     }
     
     if entity.ID > 0 {
-        return database.MasterDB.Select("*").Updates(entity).Error
+        return database.MasterDB.WithContext(ctx).Select("*").Updates(entity).Error
     }
     
     // 创建逻辑
-    return database.MasterDB.Create(entity).Error
+    return database.MasterDB.WithContext(ctx).Create(entity).Error
 }
 
 // GetEntityByID 根据ID获取实体详情
 func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.EntityName, error) {
     var entity models.EntityName
-    err := database.MasterDB.First(&entity, id).Error
+    err := database.MasterDB.WithContext(ctx).First(&entity, id).Error
     if err != nil {
         return nil, err
     }
@@ -160,7 +160,7 @@ func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.
 
 // GetEntityPage 分页查询实体列表
 func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int) {
-    db := database.MasterDB.Model(&models.EntityName{})
+    db := database.MasterDB.WithContext(ctx).Model(&models.EntityName{})
 
     // 构建查询条件
     if query.Name != nil {
@@ -193,7 +193,7 @@ func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityN
 
 // DeleteEntity 删除实体
 func (s *entityNameService) DeleteEntity(ctx context.Context, id int) error {
-    return database.MasterDB.Delete(&models.EntityName{}, id).Error
+    return database.MasterDB.WithContext(ctx).Delete(&models.EntityName{}, id).Error
 }
 ```
 
@@ -353,7 +353,7 @@ func init() {
   - `GetEntityByID(ctx context.Context, id int) (*models.EntityName, error)` - 获取详情
   - `GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int)` - 分页查询
   - `DeleteEntity(ctx context.Context, id int) error` - 删除操作
-- **数据库操作**：直接使用`database.MasterDB`进行GORM原生操作
+- **数据库操作**：直接使用`database.MasterDB.WithContext(ctx)`进行GORM原生操作，上下文贯穿整条查询链路
 
 ### 处理器层规范
 - **统一编辑接口**：使用`EntityNameEdit`方法统一处理创建和更新
@@ -416,6 +416,7 @@ func init() {
 - **统一传递**：所有服务方法接收 `context.Context` 参数
 - **请求上下文**：支持传递请求级别的数据和超时控制
 - **接口兼容**：`gin.Context` 实现了 `context.Context` 接口，可直接传递
+- **解耦保证**：Service 层只依赖标准库 `context.Context`，不 import gin、不使用 `*gin.Context` 专属方法，因此与 Gin 完全解耦，可脱离 Web 框架单独测试
 
 ### 6. 模型层重构优化
 - **移除BaseModel**：不再继承BaseModel泛型基类

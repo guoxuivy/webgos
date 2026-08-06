@@ -73,11 +73,14 @@ webgos/
 │   │   ├── auth.go                 # rbac权限认证中间件
 │   │   ├── cors.go                 # 跨域中间件
 │   │   ├── debounce.go             # 防抖中间件
+│   │   ├── gzip.go                 # Gzip压缩中间件
 │   │   ├── jwt.go                  # JWT登录认证中间件
+│   │   ├── limiter.go              # IP令牌桶限流中间件
 │   │   ├── logging.go              # 日志记录中间件
-│   │   ├── middleware.go           # 中间件接口定义
+│   │   ├── middleware.go           # 中间件注册与接口定义
 │   │   ├── recovery.go             # 恢复中间件
-│   │   └── requestid.go            # 请求ID中间件
+│   │   ├── requestid.go            # 请求ID中间件
+│   │   └── security.go             # 安全防范：敏感路径检测、恶意IP自动封禁、IP黑名单
 │   ├── models/                     # 数据访问层
 │   │   ├── base_fields.go          # 基础字段结构体
 │   │   ├── inventory_record.go     # 库存记录数据模型
@@ -209,17 +212,29 @@ webgos/
 系统实现了多种中间件来处理请求的前置和后置逻辑：
 
 ### 核心中间件
-1. **RequestID中间件**：为每个请求生成唯一标识，用于日志追踪
-2. **Recovery中间件**：捕获系统panic，防止服务崩溃
-3. **Logging中间件**：记录请求日志，便于问题追踪
-4. **CORS中间件**：处理跨域请求
-5. **JWT中间件**：处理用户身份认证
-6. **Auth中间件**：处理RBAC权限验证
-7. **Debounce中间件**：防止重复提交
+
+**全局中间件（在 `middleware.ApplyMiddlewares` 中注册，按以下顺序执行）**
+1. **IPBlacklist中间件**：最高优先级拦截，拒绝黑名单中的 IP（精确 IP 与 CIDR 网段），黑名单持久化到 `blacklist.json` 并每 5 分钟自动保存
+2. **RequestID中间件**：为每个请求生成唯一标识，用于日志追踪
+3. **Recovery中间件**：捕获系统 panic，防止服务崩溃
+4. **Logging中间件**：记录请求日志，便于问题追踪
+5. **CORS中间件**：处理跨域请求
+6. **Gzip中间件**：对响应进行 Gzip 压缩，降低传输体积
+
+**安全防范中间件**
+- **敏感路径检测（CheckSensitivePath）**：在全局 404 handler 中调用，匹配 `.env`、`.git`、`phpmyadmin`、`wp-admin`、`.sql`、备份/压缩包等敏感路径与 `/shell`、`/exec` 等危险关键字；命中按时间窗口（1 小时）计数，达到阈值（5 次）自动将该 IP 加入黑名单
+- **IP 限流（IPLimiter）**：基于令牌桶（每个 IP 独立桶）的限流，用于 `/api/auth/login` 等高风险路由防爆破，例如 `IPLimiter(1, 1)` 表示每秒 1 个请求、桶容量 1（不允许突发），超限返回 500
+
+**路由分组中间件**
+- **JWT中间件**：处理用户身份认证（登录态校验）
+- **Auth中间件**：处理 RBAC 权限验证（路由即权限点）
+- **Debounce中间件**：防止重复提交
 
 ### 中间件执行顺序
 ```
-RequestID -> Recovery -> Logging -> CORS -> JWT -> Auth -> 业务处理 -> Auth -> JWT -> CORS -> Logging -> Recovery -> RequestID
+全局：IPBlacklist -> RequestID -> Recovery -> Logging -> CORS -> Gzip
+路由组（如 /api/auth）：JWT -> Auth -> IPLimiter -> 业务处理
+404 处理：CheckSensitivePath（命中则记录并可能触发 IP 自动封禁）
 ```
 
 ## 数据库连接池配置
@@ -256,6 +271,8 @@ RequestID -> Recovery -> Logging -> CORS -> JWT -> Auth -> 业务处理 -> Auth 
 模型定义放在 `internal/models/` 中，各模型通过嵌入 `BaseFields` 结构体获得 `ID`、`CreatedAt`、`UpdatedAt`、`DeletedAt` 等通用基础字段，自身只声明业务字段。
 
 数据库操作不再经过泛型 `BaseModel` 封装，而是由 **Service 层直接使用 GORM 原生 API**（如 `xdb.GetDB().WithContext(ctx).Where(...).Find(&items)`）完成，事务通过 `xdb.GetDB().Transaction(func(tx *gorm.DB) error { ... })` 处理。
+
+Service 层所有业务方法首参数统一为 `ctx context.Context`，用于请求级超时与取消。Handler 调用时直接传入 `c *gin.Context` 即可（`gin.Context` 实现了 `context.Context` 接口），无需取 `c.Request.Context()`；Service 内部通过 `xdb.GetDB().WithContext(ctx)` 使用上下文，不直接引用 `*gin.Context`，因此 Service 与 Gin 保持解耦，可独立测试。
 
 模型定义示例：
 
