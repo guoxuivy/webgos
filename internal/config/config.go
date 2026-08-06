@@ -8,35 +8,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type DBConfig struct {
+	Host         string `yaml:"host"`
+	Port         int    `yaml:"port"`
+	Username     string `yaml:"username"`
+	Password     string `yaml:"password"`
+	DBName       string `yaml:"dbname"`
+	Dialect      string `yaml:"dialect"`
+	MaxOpenConns int    `yaml:"max_open_conns"`
+	MaxIdleConns int    `yaml:"max_idle_conns"`
+	MaxLifetime  int    `yaml:"max_lifetime"`
+}
+
 // Config 配置结构体
 type Config struct {
 	Database struct {
 		// 主库配置
-		Host     string `yaml:"host"`
-		Port     int    `yaml:"port"`
-		Username string `yaml:"username"`
-		Password string `yaml:"password"`
-		DBName   string `yaml:"dbname"`
-		Dialect  string `yaml:"dialect"`
-		// 连接池配置（主库）
-		MaxOpenConns int `yaml:"max_open_conns"`
-		MaxIdleConns int `yaml:"max_idle_conns"`
-		MaxLifetime  int `yaml:"max_lifetime"`
+		DBConfig `yaml:",inline"`
 		// 读写分离策略（新增）
 		ReadWriteSeparation bool   `yaml:"read_write_separation"` // 是否启用读写分离
 		SlaveLoadBalance    string `yaml:"slave_load_balance"`    // 备库负载均衡策略：random, round_robin（轮询）
 		// 备库配置（新增）
-		Slaves []struct {
-			Host     string `yaml:"host"`
-			Port     int    `yaml:"port"`
-			Username string `yaml:"username"`
-			Password string `yaml:"password"`
-			DBName   string `yaml:"dbname"`
-			// 备库连接池配置
-			MaxOpenConns int `yaml:"max_open_conns"`
-			MaxIdleConns int `yaml:"max_idle_conns"`
-			MaxLifetime  int `yaml:"max_lifetime"`
-		} `yaml:"slaves"`
+		Slaves []DBConfig `yaml:"slaves"`
 	} `yaml:"database"`
 	Server struct {
 		Mode string `yaml:"mode"` // "debug" 或 "release"

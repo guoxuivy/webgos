@@ -33,6 +33,7 @@ func GetSlaveDB() *gorm.DB {
 	}
 }
 
+// 随机
 func getRandomSlave() *gorm.DB {
 	slaveLock.Lock()
 	defer slaveLock.Unlock()
@@ -41,6 +42,7 @@ func getRandomSlave() *gorm.DB {
 	return slaveDBs[index]
 }
 
+// 轮询
 func getRoundRobinSlave() *gorm.DB {
 	slaveLock.Lock()
 	defer slaveLock.Unlock()

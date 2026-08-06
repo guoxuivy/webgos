@@ -18,35 +18,59 @@ var (
 
 // InitDB 初始化数据库连接
 func InitDB() error {
-	dialector, err := dialector()
+	db, err := openDB(config.GlobalConfig.Database.DBConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create dialector: %w", err)
+		return err
 	}
+	masterDB = db
 
-	sqlDB, err := gorm.Open(dialector, &gorm.Config{
-		Logger: xlog.NewGormLogger(),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to connect database: %w", err)
+	if config.GlobalConfig.Database.ReadWriteSeparation {
+		if err := initSlaveDBs(); err != nil {
+			return fmt.Errorf("failed to init slave db: %w", err)
+		}
 	}
-
-	// 设置连接池参数
-	sqlDBInstance, err := sqlDB.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get database instance: %w", err)
-	}
-	dbConfig := config.GlobalConfig.Database
-	// 设置连接池参数
-	sqlDBInstance.SetMaxOpenConns(dbConfig.MaxOpenConns)                                // 设置最大打开连接数
-	sqlDBInstance.SetMaxIdleConns(dbConfig.MaxIdleConns)                                // 设置最大空闲连接数
-	sqlDBInstance.SetConnMaxLifetime(time.Duration(dbConfig.MaxLifetime) * time.Minute) // 设置连接的最大生命周期
-
-	masterDB = sqlDB
 	return nil
 }
 
-func dialector() (gorm.Dialector, error) {
-	dbConfig := config.GlobalConfig.Database
+// 从库初始化
+func initSlaveDBs() error {
+	slavesConfig := config.GlobalConfig.Database.Slaves
+	// 初始化备库连接池（读写分离）
+	slaveDBs = make([]*gorm.DB, 0, len(slavesConfig))
+	for _, slave := range slavesConfig {
+		sdb, err := openDB(slave)
+		if err != nil {
+			return err
+		}
+		slaveDBs = append(slaveDBs, sdb)
+	}
+	return nil
+}
+
+// openDB 创建数据库连接并设置连接池参数（主库与备库共用）
+func openDB(dbConfig config.DBConfig) (*gorm.DB, error) {
+	d, err := dialector(dbConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dialector: %w", err)
+	}
+	db, err := gorm.Open(d, &gorm.Config{
+		Logger: xlog.NewGormLogger(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect database: %w", err)
+	}
+	// 设置连接池参数
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database instance: %w", err)
+	}
+	sqlDB.SetMaxOpenConns(dbConfig.MaxOpenConns)                                // 设置最大打开连接数
+	sqlDB.SetMaxIdleConns(dbConfig.MaxIdleConns)                                // 设置最大空闲连接数
+	sqlDB.SetConnMaxLifetime(time.Duration(dbConfig.MaxLifetime) * time.Minute) // 设置连接的最大生命周期
+	return db, nil
+}
+
+func dialector(dbConfig config.DBConfig) (gorm.Dialector, error) {
 	// 根据配置的 dialect 选择相应的数据库驱动
 	var dialector gorm.Dialector
 	switch dbConfig.Dialect {
