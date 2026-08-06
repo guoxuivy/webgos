@@ -330,7 +330,7 @@ func (b *ipBlacklist) loadFromFile() {
 		}
 	}
 
-	xlog.Warn("[SECURITY] 黑名单加载完成 IP=%d CIDR=%d", len(b.ips), len(b.cidrs))
+	xlog.Info("[SECURITY] 黑名单加载完成 IP=%d CIDR=%d", len(b.ips), len(b.cidrs))
 }
 
 // saveToFile 将黑名单数据持久化到磁盘，间隔调用时顺便清理过期追踪记录

@@ -51,7 +51,7 @@ func RBAC() gin.HandlerFunc {
 			for _, role := range user.Roles {
 				for _, menu := range role.Menus {
 					for _, perm := range menu.Permissions {
-						key := perm.Path + ":" + perm.Method
+						key := perm.Name
 						permissions[key] = true
 					}
 				}
@@ -73,7 +73,7 @@ func RBAC() gin.HandlerFunc {
 		// 检查当前请求是否有权限（统一转小写，与权限点同步时存储的 path 保持一致）
 		currentPath := strings.ToLower(c.FullPath())
 		currentMethod := strings.ToUpper(c.Request.Method)
-		requiredPermission := currentPath + ":" + currentMethod
+		requiredPermission := currentPath + "#" + currentMethod
 		if permissions[requiredPermission] {
 			c.Next()
 		} else {
