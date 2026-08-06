@@ -23,25 +23,29 @@ internal/
 
 ## 核心模式
 
-### 1. BaseModel 泛型模型（Active Record）
+### 1. 模型与数据库操作（BaseFields + GORM 原生）
+
+模型通过嵌入 `BaseFields` 结构体获得通用基础字段，自身仅声明业务字段：
 
 ```go
-type BaseModel[T any] struct {
-    ID int `gorm:"primarykey" json:"id"`
-    CreatedAt time.Time `json:"created_at"`
-    UpdatedAt time.Time `json:"updated_at"`
-    DeletedAt *time.Time `json:"deleted_at,omitempty"`
-    queryHandler *gorm.DB `gorm:"-"`
+type Park struct {
+    models.BaseFields
+    Name   string `gorm:"size:100" json:"name"`
+    Status int64  `json:"status"`
 }
 ```
 
-**核心方法**：
+数据库操作不再经过泛型 `BaseModel` 封装，由 **Service 层直接使用 GORM 原生 API** 完成：
 
-- `Create(item)` / `Read(id)` / `Update(item)` / `Delete(id)`
-- `More()` / `One()` / `Page(page, pageSize)` → `(items, total, err)`
-- `Count()` / `Exist()`
-- 链式查询：`Where()` / `Order()` / `Select()` / `Preload()` / `Limit()`
-- 事务：`WithTx(tx)` / `WithCtx(ctx)`
+- 查询：`xdb.GetDB().WithContext(ctx).Where(...).Order(...).Limit(...).Offset(...).Find(&items)`
+- 单条：`xdb.GetDB().WithContext(ctx).First(&item, id)`
+- 分页：`xdb.GetDB().WithContext(ctx).Where(...).Count(&total)` 配合 `Limit/Offset` 查询
+- 创建：`xdb.GetDB().WithContext(ctx).Create(&item)`
+- 更新：`xdb.GetDB().WithContext(ctx).Updates(&item)`（仅更新非零值字段）
+- 删除（软删除）：`xdb.GetDB().WithContext(ctx).Delete(&item, id)`
+- 事务：`xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error { ... })`
+
+**约定**：所有 Service 方法第一个参数为 `ctx context.Context`，用于请求级超时与取消。
 
 ### 2. Service 接口模式
 
@@ -145,7 +149,7 @@ func XxxList(c *gin.Context) {
 ## 新增CRUD模块清单
 
 ```
-□ internal/models/xxx.go       # BaseModel + 字段 + Serialize/Deserialize
+□ internal/models/xxx.go       # BaseFields 嵌入 + 字段 + Serialize/Deserialize
 □ internal/dto/xxx.go          # Query/Create + ToModel()
 □ internal/services/xxx.go     # 接口定义 + 实现
 □ internal/handlers/xxx.go     # Validate + Service调用 + Response
@@ -159,7 +163,7 @@ func XxxList(c *gin.Context) {
 3. **JSONB字段**：保存前调`Serialize()`，读取后调`Deserialize()`
 4. **增删改后清除缓存**：`cache.GetCache().DeleteByPrefix(...)`
 5. **错误统一用response返回**，不要直接return
-6. **不要修改BaseModel**，继承即可
+6. **不要修改BaseFields**，嵌入即可
 7. **软删除默认开启**，物理删除用`Unscoped()`
 8. **Swagger注解**放在Handler函数上方
 
@@ -167,5 +171,5 @@ func XxxList(c *gin.Context) {
 
 1. **分页接口返回格式错误**：使用 `list` 代替 `items`
 2. **缺少 Preload**：关联数据为空
-3. **Service层缺少 WithCtx(ctx)**：上下文丢失
+3. **Service层缺少 ctx 参数**：上下文丢失，无法传递超时与取消
 4. **Handler中重复设置UserID**：应从context获取

@@ -15,7 +15,7 @@ webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 
 - **日志系统**：完善的自定义日志记录系统，支持请求追踪和问题排查
 - **优雅关闭**：支持服务的优雅启动和关闭
 - **事务支持**：提供便捷的事务处理能力，支持事务嵌套
-- **泛型模型**：基于泛型的 BaseModel，提供通用的 CRUD 操作
+- **模型封装**：模型通过嵌入 `BaseFields` 获得通用基础字段，数据库操作使用 GORM 原生 API
 
 ## 技术栈
 - **编程语言**：Go 1.25
@@ -79,7 +79,7 @@ webgos/
 │   │   ├── recovery.go             # 恢复中间件
 │   │   └── requestid.go            # 请求ID中间件
 │   ├── models/                     # 数据访问层
-│   │   ├── base_model.go           # 基础模型
+│   │   ├── base_fields.go          # 基础字段结构体
 │   │   ├── inventory_record.go     # 库存记录数据模型
 │   │   ├── menu.go                 # 菜单数据模型
 │   │   ├── product.go              # 产品数据模型
@@ -131,7 +131,7 @@ webgos/
 
 1. **Handlers（表现层）**：处理 HTTP 请求、参数验证与响应（Gin）
 2. **Services（业务层）**：组织业务逻辑、事务边界、调用模型层
-3. **Models（数据访问层）**：封装对数据库的 CRUD 封装（BaseModel 提供泛型通用实现）
+3. **Models（数据访问层）**：定义数据结构并嵌入 `BaseFields` 获取基础字段，数据库操作通过 GORM 原生 API 在 Service 层完成
 4. **DTO（数据传输对象）**：处理入参与出参结构定义与验证
 5. **Infrastructure（基础设施）**：配置、数据库连接、日志、middleware 等
 
@@ -251,41 +251,32 @@ RequestID -> Recovery -> Logging -> CORS -> JWT -> Auth -> 业务处理 -> Auth 
 
 注意：项目中已经有 `response` 工具用于统一封装响应，调用方应按照库提供的方法传入明确的 HTTP 状态码与业务码。
 
-## BaseModel（模型层）说明
+## 模型层与数据库操作说明
 
-`internal/models/base_model.go` 中实现了项目通用的数据访问封装，设计要点与约定：
+模型定义放在 `internal/models/` 中，各模型通过嵌入 `BaseFields` 结构体获得 `ID`、`CreatedAt`、`UpdatedAt`、`DeletedAt` 等通用基础字段，自身只声明业务字段。
 
-- 泛型 `T`：约定为非指针的结构体类型（例如 `User`，而非 `*User`）。在文档与代码注释中声明该约定可避免类型变成 `**T` 的歧义。
-- 显式 Model：在 Count、Page、Exist、More、One、Delete 等需要确定目标模型的操作中，库代码使用 `Model((*T)(nil))` 的写法以保证：不产生额外分配并能识别指针接收器上实现的方法（例如 `TableName()`）。
-- WithCtx / WithTx：提供 `WithCtx`（绑定 `context.Context`）和 `WithTx`（绑定事务 `*gorm.DB`）方法，均返回克隆的 `BaseModel` 实例，便于在请求或事务范围内安全使用。
+数据库操作不再经过泛型 `BaseModel` 封装，而是由 **Service 层直接使用 GORM 原生 API**（如 `xdb.GetDB().WithContext(ctx).Where(...).Find(&items)`）完成，事务通过 `xdb.GetDB().Transaction(func(tx *gorm.DB) error { ... })` 处理。
 
-常用方法（示例）
-
-- `Create(item *T) error`
-- `Read(id int) (*T, error)`
-- `Update(item *T) error`（当前实现使用 GORM `Updates`，仅更新非零值字段；如需覆盖全部字段请使用 `Save`）
-- `UpdateColumns(item *T) error`（更新指定字段）
-- `Delete(id int) error`（软删除）
-- `More() ([]T, error)`
-- `One() (*T, error)`（返回底层错误，调用方可对 `gorm.ErrRecordNotFound` 做 404 处理）
-- `Count() (int, error)`
-- `Page(page, pageSize int) ([]T, int, error)`（本项目建议 Page 返回 error，以便上层处理 DB 错误）
-- `Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) error`（事务支持）
-
-链式查询示例：
+模型定义示例：
 
 ```go
-m := userModel.WithCtx(ctx) // 在 handler 中克隆并绑定请求 ctx
-items, total, err := m.Where("active = ?", 1).Order("id desc").Page(1, 20)
+type User struct {
+	models.BaseFields
+	Username string `gorm:"size:64;uniqueIndex" json:"username"`
+	Password string `json:"-"`
+}
 ```
 
-事务示例：
+Service 层使用 GORM 原生操作示例：
 
 ```go
-err := database.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-  m := userModel.WithTx(tx).WithCtx(ctx) // 同时绑定 tx 与 ctx
-  return m.Where("id = ?", id).UpdateByID(id, map[string]any{"name": "new"})
-})
+func (s *userService) GetUserInfo(ctx context.Context, id int) (*models.User, error) {
+	var u models.User
+	if err := xdb.GetDB().WithContext(ctx).First(&u, id).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
 ```
 
 ## 开发与部署

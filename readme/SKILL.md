@@ -341,7 +341,7 @@ func init() {
 - **路由注册**：使用`init()`函数和`WrapRouter`进行路由注册
 - **中间件**：默认添加JWT认证中间件
 - **Context 传递**：服务层方法统一接收 `context.Context` 参数
-- **GORM原生操作**：直接使用`database.MasterDB`进行数据库操作，不再使用BaseModel封装
+- **GORM原生操作**：直接使用`xdb.GetDB()`进行数据库操作，不再使用BaseModel封装
 
 ### 服务层规范
 - **接口化设计**：定义接口 + 实现结构体
