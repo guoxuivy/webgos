@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"webgos/internal/models"
-	"webgos/internal/xdb"
 )
 
 type ProductService interface {
@@ -24,7 +23,7 @@ func (s *productService) CreateProduct(ctx context.Context, product *models.Prod
 	if product.Name == "" {
 		return errors.New("产品名称不能为空")
 	}
-	return xdb.GetDB().WithContext(ctx).Create(product).Error
+	return ctxDB(ctx).Create(product).Error
 }
 
 func (s *productService) GetProductByID(ctx context.Context, id string) (*models.Product, error) {
@@ -34,6 +33,6 @@ func (s *productService) GetProductByID(ctx context.Context, id string) (*models
 	}
 
 	var product models.Product
-	err = xdb.GetDB().WithContext(ctx).First(&product, productID).Error
+	err = ctxDB(ctx).First(&product, productID).Error
 	return &product, err
 }

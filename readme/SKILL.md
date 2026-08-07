@@ -52,7 +52,7 @@ type EntityName struct {
 // EntityName 实体数据传输对象
 // @description 实体数据传输对象，用于API请求和响应
 type EntityName struct {
-    ID     int      `json:"id" validate:"omitempty,gte=0" label:"实体ID"`
+    ID     *int     `json:"id" validate:"omitempty,gte=0" label:"实体ID"`
     Name   *string  `json:"name" validate:"omitempty,max=100" label:"实体名称"`
     Code   *string  `json:"code" validate:"omitempty,max=50" label:"实体编码"`
     Status *int     `json:"status" validate:"omitempty,oneof=1 2 3 4" label:"状态"`
@@ -70,18 +70,13 @@ type EntityNameQuery struct {
 }
 
 // ToModel 将 DTO 转换为模型（用于创建和更新操作）
+// 注意：仅做字段映射，不查库；如需更新，由服务层用 ctxDB(ctx) 写入
 func (dto *EntityName) ToModel() *models.EntityName {
-    var model *models.EntityName
-    if dto.ID == 0 {
-        model = &models.EntityName{}
-    } else {
-        var existing models.EntityName
-        if err := database.MasterDB.First(&existing, dto.ID).Error; err != nil {
-            return nil
-        }
-        model = &existing
-    }
+    var model models.EntityName
 
+    if dto.ID != nil {
+        model.ID = *dto.ID
+    }
     if dto.Name != nil {
         model.Name = *dto.Name
     }
@@ -93,28 +88,52 @@ func (dto *EntityName) ToModel() *models.EntityName {
     }
     // 其他字段转换...
 
-    return model
+    return &model
 }
 ```
 
 ### 3. 服务文件 (internal/services/)
+
+服务层统一通过 `ctxDB(ctx)` 辅助函数获取带上下文的 `*gorm.DB`，该函数定义在 `internal/services/helper.go`：
+
+```go
+// internal/services/helper.go
+package services
+
+import (
+    "context"
+
+    "webgos/internal/xdb"
+
+    "gorm.io/gorm"
+)
+
+// ctxDB 返回带 context 的 GORM 实例，供服务层所有数据库操作使用
+func ctxDB(ctx context.Context) *gorm.DB {
+    return xdb.GetDB().WithContext(ctx)
+}
+```
+
+> 注意：`WithContext` 在 GORM 中是无副作用的（仅基于全局连接池复制实例并设置 ctx 字段），因此同一函数内多次调用 `ctxDB(ctx)` 没有性能问题。在**同一事务闭包内**必须使用闭包参数 `tx`，不要再用 `ctxDB(ctx)`，否则会脱离事务另开会话。
+
 ```go
 import (
     "context"
-    "cyp/internal/database"
-    "cyp/internal/dto"
-    "cyp/internal/models"
+
+    "webgos/internal/dto"
+    "webgos/internal/models"
 )
 
 // EntityNameService 实体服务接口
+// 方法按业务语义命名，避免千篇一律的 Save/Get/Delete 前缀
 type EntityNameService interface {
     // 统一保存方法（创建和更新）
-    SaveEntity(ctx context.Context, data *models.EntityName) error
-    
+    SaveEntity(ctx context.Context, entity *models.EntityName) error
+
     // 查询方法
     GetEntityByID(ctx context.Context, id int) (*models.EntityName, error)
-    GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int)
-    
+    GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int64)
+
     // 删除方法
     DeleteEntity(ctx context.Context, id int) error
 }
@@ -129,40 +148,42 @@ func NewEntityNameService() EntityNameService {
 
 // SaveEntity 统一保存实体（创建和更新）
 func (s *entityNameService) SaveEntity(ctx context.Context, entity *models.EntityName) error {
-    // 手动序列化 JSONB 字段
+    // 手动序列化 JSONB 字段（如有）
     if err := entity.Serialize(); err != nil {
         return err
     }
-    
+
+    db := ctxDB(ctx)
+
     if entity.ID > 0 {
-        return database.MasterDB.WithContext(ctx).Select("*").Updates(entity).Error
+        return db.Select("*").Updates(entity).Error
     }
-    
+
     // 创建逻辑
-    return database.MasterDB.WithContext(ctx).Create(entity).Error
+    return db.Create(entity).Error
 }
 
 // GetEntityByID 根据ID获取实体详情
 func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.EntityName, error) {
     var entity models.EntityName
-    err := database.MasterDB.WithContext(ctx).First(&entity, id).Error
+    err := ctxDB(ctx).First(&entity, id).Error
     if err != nil {
         return nil, err
     }
-    
-    // 手动反序列化 JSONB 字段
+
+    // 手动反序列化 JSONB 字段（如有）
     if err := entity.Deserialize(); err != nil {
         return nil, err
     }
-    
+
     return &entity, nil
 }
 
 // GetEntityPage 分页查询实体列表
-func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int) {
-    db := database.MasterDB.WithContext(ctx).Model(&models.EntityName{})
+func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int64) {
+    db := ctxDB(ctx).Model(&models.EntityName{})
 
-    // 构建查询条件
+    // 构建查询条件（指针类型判断参数是否存在）
     if query.Name != nil {
         db = db.Where("name LIKE ?", "%"+*query.Name+"%")
     }
@@ -176,24 +197,25 @@ func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityN
     }
 
     var entities []models.EntityName
-    offset := (query.Page - 1) * query.PageSize
-    if err := db.Offset(offset).Limit(query.PageSize).Find(&entities).Error; err != nil {
+    // 使用 models.Page Scope 统一处理分页（替代手动计算 offset）
+    db = db.Scopes(models.Page(query.Page, query.PageSize))
+    if err := db.Find(&entities).Error; err != nil {
         return []models.EntityName{}, 0
     }
-    
-    // 手动反序列化所有记录的 JSONB 字段
+
+    // 手动反序列化所有记录的 JSONB 字段（如有）
     for i := range entities {
         if err := entities[i].Deserialize(); err != nil {
             continue
         }
     }
-    
-    return entities, int(total)
+
+    return entities, total
 }
 
 // DeleteEntity 删除实体
 func (s *entityNameService) DeleteEntity(ctx context.Context, id int) error {
-    return database.MasterDB.WithContext(ctx).Delete(&models.EntityName{}, id).Error
+    return ctxDB(ctx).Delete(&models.EntityName{}, id).Error
 }
 ```
 
@@ -218,7 +240,7 @@ func EntityNameList(c *gin.Context) {
     }
 
     entityService := services.NewEntityNameService()
-    entities, total := entityService.GetEntityPage(c, query)
+    entities, total := entityService.GetEntityPage(c, query) // c *gin.Context 实现了 context.Context
 
     response.Success(c, "获取成功", gin.H{
         "list":  entities,
@@ -341,7 +363,7 @@ func init() {
 - **路由注册**：使用`init()`函数和`WrapRouter`进行路由注册
 - **中间件**：默认添加JWT认证中间件
 - **Context 传递**：服务层方法统一接收 `context.Context` 参数
-- **GORM原生操作**：直接使用`xdb.GetDB()`进行数据库操作，不再使用BaseModel封装
+- **GORM原生操作**：服务层统一通过 `ctxDB(ctx)` 辅助函数（`xdb.GetDB().WithContext(ctx)`）进行数据库操作，不再使用 BaseModel 封装
 
 ### 服务层规范
 - **接口化设计**：定义接口 + 实现结构体
@@ -353,7 +375,9 @@ func init() {
   - `GetEntityByID(ctx context.Context, id int) (*models.EntityName, error)` - 获取详情
   - `GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int)` - 分页查询
   - `DeleteEntity(ctx context.Context, id int) error` - 删除操作
-- **数据库操作**：直接使用`database.MasterDB.WithContext(ctx)`进行GORM原生操作，上下文贯穿整条查询链路
+- **数据库操作**：使用 `ctxDB(ctx)` 辅助函数获取带上下文的 `*gorm.DB`（`xdb.GetDB().WithContext(ctx)`），上下文贯穿整条查询链路
+  - 同一函数内可多次调用 `ctxDB(ctx)`（`WithContext` 无副作用，零成本），也可在开头取一次 `db := ctxDB(ctx)` 局部变量连续使用
+  - 事务闭包内必须使用闭包参数 `tx`，不得再调用 `ctxDB(ctx)`
 
 ### 处理器层规范
 - **统一编辑接口**：使用`EntityNameEdit`方法统一处理创建和更新
@@ -400,7 +424,7 @@ func init() {
 - **链式构建**：使用GORM的链式查询构建器
 - **条件过滤**：通过指针判断是否添加查询条件
 - **灵活查询**：支持精确查询和模糊查询
-- **GORM原生**：直接使用`database.MasterDB`进行查询
+- **GORM原生**：通过 `ctxDB(ctx)` 进行查询（底层为 `xdb.GetDB()`）
 
 ### 3. 错误处理优化
 - **统一格式**：使用`response.Error()`和`response.Success()`
@@ -421,7 +445,7 @@ func init() {
 ### 6. 模型层重构优化
 - **移除BaseModel**：不再继承BaseModel泛型基类
 - **BaseFields嵌入**：使用`BaseFields`结构体嵌入获得基础字段
-- **GORM原生操作**：服务层直接使用`database.MasterDB`进行数据库操作
+- **GORM原生操作**：服务层通过 `ctxDB(ctx)` 进行数据库操作（底层 `xdb.GetDB()`）
 - **简化设计**：降低代码复杂度，提高可维护性
 
 ## 示例用法

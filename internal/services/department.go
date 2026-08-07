@@ -6,7 +6,6 @@ import (
 
 	"webgos/internal/dto"
 	"webgos/internal/models"
-	"webgos/internal/xdb"
 	"webgos/internal/xlog"
 
 	"gorm.io/gorm"
@@ -30,14 +29,14 @@ func NewDepartmentService() DepartmentService {
 func (s *departmentService) Create(ctx context.Context, dtoModel dto.AddDepartmentDTO) (*models.Department, error) {
 	if dtoModel.ParentID > 0 {
 		var parent models.Department
-		if err := xdb.GetDB().WithContext(ctx).First(&parent, dtoModel.ParentID).Error; err != nil {
+		if err := ctxDB(ctx).First(&parent, dtoModel.ParentID).Error; err != nil {
 			return nil, errors.New("父部门不存在")
 		}
 	}
 
 	if dtoModel.LeaderID != nil && *dtoModel.LeaderID > 0 {
 		var leader models.User
-		if err := xdb.GetDB().WithContext(ctx).First(&leader, *dtoModel.LeaderID).Error; err != nil {
+		if err := ctxDB(ctx).First(&leader, *dtoModel.LeaderID).Error; err != nil {
 			return nil, errors.New("负责人不存在")
 		}
 	}
@@ -47,7 +46,7 @@ func (s *departmentService) Create(ctx context.Context, dtoModel dto.AddDepartme
 		department.Status = 1
 	}
 
-	if err := xdb.GetDB().WithContext(ctx).Create(&department).Error; err != nil {
+	if err := ctxDB(ctx).Create(&department).Error; err != nil {
 		return nil, err
 	}
 
@@ -56,20 +55,20 @@ func (s *departmentService) Create(ctx context.Context, dtoModel dto.AddDepartme
 
 func (s *departmentService) Update(ctx context.Context, dtoModel dto.EditDepartmentDTO) error {
 	var department models.Department
-	if err := xdb.GetDB().WithContext(ctx).First(&department, dtoModel.ID).Error; err != nil {
+	if err := ctxDB(ctx).First(&department, dtoModel.ID).Error; err != nil {
 		return errors.New("部门不存在")
 	}
 
 	if dtoModel.ParentID != nil && *dtoModel.ParentID > 0 {
 		var parent models.Department
-		if err := xdb.GetDB().WithContext(ctx).First(&parent, *dtoModel.ParentID).Error; err != nil {
+		if err := ctxDB(ctx).First(&parent, *dtoModel.ParentID).Error; err != nil {
 			return errors.New("父部门不存在")
 		}
 	}
 
 	if dtoModel.LeaderID != nil && *dtoModel.LeaderID > 0 {
 		var leader models.User
-		if err := xdb.GetDB().WithContext(ctx).First(&leader, *dtoModel.LeaderID).Error; err != nil {
+		if err := ctxDB(ctx).First(&leader, *dtoModel.LeaderID).Error; err != nil {
 			return errors.New("负责人不存在")
 		}
 	}
@@ -93,16 +92,16 @@ func (s *departmentService) Update(ctx context.Context, dtoModel dto.EditDepartm
 		department.Sort = *dtoModel.Sort
 	}
 
-	return xdb.GetDB().WithContext(ctx).Select("*").Updates(&department).Error
+	return ctxDB(ctx).Select("*").Updates(&department).Error
 }
 
 func (s *departmentService) Delete(ctx context.Context, id int) error {
 	var department models.Department
-	if err := xdb.GetDB().WithContext(ctx).First(&department, id).Error; err != nil {
+	if err := ctxDB(ctx).First(&department, id).Error; err != nil {
 		return errors.New("部门不存在")
 	}
 
-	return xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return ctxDB(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("parent_id = ?", id).Delete(&models.Department{}).Error; err != nil {
 			return err
 		}
@@ -117,7 +116,7 @@ func (s *departmentService) Delete(ctx context.Context, id int) error {
 
 func (s *departmentService) GetTree(ctx context.Context) ([]models.Department, error) {
 	var departments []models.Department
-	if err := xdb.GetDB().WithContext(ctx).Preload("Leader").Order("parent_id ASC, sort ASC").Find(&departments).Error; err != nil {
+	if err := ctxDB(ctx).Preload("Leader").Order("parent_id ASC, sort ASC").Find(&departments).Error; err != nil {
 		return nil, err
 	}
 	return s.buildDepartmentTree(ctx, departments, 0), nil
@@ -130,7 +129,7 @@ func (s *departmentService) buildDepartmentTree(ctx context.Context, departments
 			children := s.buildDepartmentTree(ctx, departments, departments[i].ID)
 			departments[i].Children = children
 
-			if err := xdb.GetDB().WithContext(ctx).Where("department_id = ?", departments[i].ID).Find(&departments[i].Users).Error; err != nil {
+			if err := ctxDB(ctx).Where("department_id = ?", departments[i].ID).Find(&departments[i].Users).Error; err != nil {
 				xlog.Error("加载部门成员失败: %v", err)
 			}
 			tree = append(tree, departments[i])
@@ -141,7 +140,7 @@ func (s *departmentService) buildDepartmentTree(ctx context.Context, departments
 
 func (s *departmentService) AddUsers(ctx context.Context, departmentID int, userIDs []int) error {
 	var department models.Department
-	if err := xdb.GetDB().WithContext(ctx).First(&department, departmentID).Error; err != nil {
+	if err := ctxDB(ctx).First(&department, departmentID).Error; err != nil {
 		return errors.New("部门不存在")
 	}
 
@@ -149,16 +148,16 @@ func (s *departmentService) AddUsers(ctx context.Context, departmentID int, user
 		return nil
 	}
 
-	return xdb.GetDB().WithContext(ctx).Model(&models.User{}).Where("id IN ?", userIDs).Update("department_id", departmentID).Error
+	return ctxDB(ctx).Model(&models.User{}).Where("id IN ?", userIDs).Update("department_id", departmentID).Error
 }
 
 func (s *departmentService) RemoveUser(ctx context.Context, userID int) error {
 	var user models.User
-	if err := xdb.GetDB().WithContext(ctx).First(&user, userID).Error; err != nil {
+	if err := ctxDB(ctx).First(&user, userID).Error; err != nil {
 		return errors.New("用户不存在")
 	}
 
-	db := xdb.GetDB().WithContext(ctx)
+	db := ctxDB(ctx)
 
 	// 如果该用户是其所属部门的负责人，先将对应部门的负责人置空
 	if user.DepartmentID != 0 {

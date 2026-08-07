@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"webgos/internal/models"
-	"webgos/internal/xdb"
 )
 
 type InventoryService interface {
@@ -25,7 +24,7 @@ func (s *inventoryService) ProductIn(ctx context.Context, record *models.Invento
 	}
 	record.Type = "in"
 
-	db := xdb.GetDB().WithContext(ctx)
+	db := ctxDB(ctx)
 
 	if err := db.Create(record).Error; err != nil {
 		return err
@@ -46,7 +45,7 @@ func (s *inventoryService) ProductOut(ctx context.Context, record *models.Invent
 	}
 	record.Type = "out"
 
-	db := xdb.GetDB().WithContext(ctx)
+	db := ctxDB(ctx)
 
 	var product models.Product
 	if err := db.First(&product, record.ProductID).Error; err != nil {

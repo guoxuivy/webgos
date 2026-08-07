@@ -7,7 +7,6 @@ import (
 	"webgos/internal/config"
 	"webgos/internal/dto"
 	"webgos/internal/models"
-	"webgos/internal/xdb"
 
 	"gorm.io/gorm"
 )
@@ -44,7 +43,7 @@ func (s *menuService) AddMenu(ctx context.Context, dtoModel dto.MenuDTO) (*model
 		Meta:      dtoModel.Meta,
 	}
 
-	if err := xdb.GetDB().WithContext(ctx).Create(menu).Error; err != nil {
+	if err := ctxDB(ctx).Create(menu).Error; err != nil {
 		return nil, err
 	}
 	return menu, nil
@@ -52,7 +51,7 @@ func (s *menuService) AddMenu(ctx context.Context, dtoModel dto.MenuDTO) (*model
 
 func (s *menuService) EditMenu(ctx context.Context, id int, dtoModel dto.MenuDTO) error {
 	var menu models.Menu
-	if err := xdb.GetDB().WithContext(ctx).First(&menu, id).Error; err != nil {
+	if err := ctxDB(ctx).First(&menu, id).Error; err != nil {
 		return errors.New("菜单不存在")
 	}
 
@@ -64,55 +63,55 @@ func (s *menuService) EditMenu(ctx context.Context, id int, dtoModel dto.MenuDTO
 	menu.Pid = dtoModel.Pid
 	menu.Meta = dtoModel.Meta
 
-	return xdb.GetDB().WithContext(ctx).Select("*").Updates(&menu).Error
+	return ctxDB(ctx).Select("*").Updates(&menu).Error
 }
 
 func (s *menuService) CreateMenu(ctx context.Context, menu *models.Menu) error {
-	return xdb.GetDB().WithContext(ctx).Create(menu).Error
+	return ctxDB(ctx).Create(menu).Error
 }
 
 func (s *menuService) UpdateMenu(ctx context.Context, id int, menu *models.Menu) error {
 	var existingMenu models.Menu
-	if err := xdb.GetDB().WithContext(ctx).First(&existingMenu, id).Error; err != nil {
+	if err := ctxDB(ctx).First(&existingMenu, id).Error; err != nil {
 		return errors.New("菜单不存在")
 	}
 
 	menu.ID = id
-	return xdb.GetDB().WithContext(ctx).Select("*").Updates(menu).Error
+	return ctxDB(ctx).Select("*").Updates(menu).Error
 }
 
 func (s *menuService) DeleteMenu(ctx context.Context, id int) error {
 	var existingMenu models.Menu
-	if err := xdb.GetDB().WithContext(ctx).First(&existingMenu, id).Error; err != nil {
+	if err := ctxDB(ctx).First(&existingMenu, id).Error; err != nil {
 		return errors.New("菜单不存在")
 	}
 
 	var childCount int64
-	if err := xdb.GetDB().WithContext(ctx).Model(&models.Menu{}).Where("parent_id = ?", id).Count(&childCount).Error; err != nil {
+	if err := ctxDB(ctx).Model(&models.Menu{}).Where("parent_id = ?", id).Count(&childCount).Error; err != nil {
 		return err
 	}
 	if childCount > 0 {
 		return errors.New("存在子菜单，无法删除")
 	}
 
-	return xdb.GetDB().WithContext(ctx).Delete(&models.Menu{}, id).Error
+	return ctxDB(ctx).Delete(&models.Menu{}, id).Error
 }
 
 func (s *menuService) GetMenuByID(ctx context.Context, id int) (*models.Menu, error) {
 	var menu models.Menu
-	err := xdb.GetDB().WithContext(ctx).First(&menu, id).Error
+	err := ctxDB(ctx).First(&menu, id).Error
 	return &menu, err
 }
 
 func (s *menuService) GetAllMenus(ctx context.Context) ([]models.Menu, error) {
 	var menus []models.Menu
-	err := xdb.GetDB().WithContext(ctx).Find(&menus).Error
+	err := ctxDB(ctx).Find(&menus).Error
 	return menus, err
 }
 
 func (s *menuService) GetMenuTree(ctx context.Context) ([]models.Menu, error) {
 	var menus []models.Menu
-	if err := xdb.GetDB().WithContext(ctx).Order("sort ASC").Find(&menus).Error; err != nil {
+	if err := ctxDB(ctx).Order("sort ASC").Find(&menus).Error; err != nil {
 		return nil, err
 	}
 
@@ -122,7 +121,7 @@ func (s *menuService) GetMenuTree(ctx context.Context) ([]models.Menu, error) {
 
 func (s *menuService) IsNameExists(ctx context.Context, name string, id ...int) (bool, error) {
 	var count int64
-	db := xdb.GetDB().WithContext(ctx).Model(&models.Menu{}).Where("name = ?", name)
+	db := ctxDB(ctx).Model(&models.Menu{}).Where("name = ?", name)
 
 	if len(id) > 0 {
 		db = db.Where("id != ?", id[0])
@@ -136,7 +135,7 @@ func (s *menuService) IsNameExists(ctx context.Context, name string, id ...int) 
 
 func (s *menuService) IsPathExists(ctx context.Context, path string, id ...int) (bool, error) {
 	var count int64
-	db := xdb.GetDB().WithContext(ctx).Model(&models.Menu{}).Where("path = ?", path)
+	db := ctxDB(ctx).Model(&models.Menu{}).Where("path = ?", path)
 
 	if len(id) > 0 {
 		db = db.Where("id != ?", id[0])
@@ -150,7 +149,7 @@ func (s *menuService) IsPathExists(ctx context.Context, path string, id ...int) 
 
 func (s *menuService) GetUserMenus(ctx context.Context, userID int) ([]models.Menu, error) {
 	var user models.User
-	if err := xdb.GetDB().WithContext(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
+	if err := ctxDB(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -175,7 +174,7 @@ func (s *menuService) GetUserMenus(ctx context.Context, userID int) ([]models.Me
 		menuIDs = append(menuIDs, menuID)
 	}
 
-	db := xdb.GetDB().WithContext(ctx).Model(&models.Menu{}).Where("status = ? AND type != ?", 1, "button")
+	db := ctxDB(ctx).Model(&models.Menu{}).Where("status = ? AND type != ?", 1, "button")
 	if !isSuper {
 		db = db.Where("id IN ?", menuIDs)
 	}
@@ -194,13 +193,13 @@ func (s *menuService) GetUserMenus(ctx context.Context, userID int) ([]models.Me
 // 采用 Replace 语义，保证幂等。
 func (s *menuService) AssignPermissionsToMenu(ctx context.Context, menuID int, permissionIDs []int) error {
 	var menu models.Menu
-	if err := xdb.GetDB().WithContext(ctx).First(&menu, menuID).Error; err != nil {
+	if err := ctxDB(ctx).First(&menu, menuID).Error; err != nil {
 		return errors.New("菜单不存在")
 	}
 
 	var permissions []models.RBACPermission
 	if len(permissionIDs) > 0 {
-		if err := xdb.GetDB().WithContext(ctx).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
+		if err := ctxDB(ctx).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
 			return errors.New("查询权限时出错")
 		}
 		if len(permissions) != len(permissionIDs) {
@@ -208,7 +207,7 @@ func (s *menuService) AssignPermissionsToMenu(ctx context.Context, menuID int, p
 		}
 	}
 
-	if err := xdb.GetDB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := ctxDB(ctx).Transaction(func(tx *gorm.DB) error {
 		return tx.Model(&menu).Association("Permissions").Replace(permissions)
 	}); err != nil {
 		return err

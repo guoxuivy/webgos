@@ -10,7 +10,6 @@ import (
 	"webgos/internal/cache"
 	"webgos/internal/config"
 	"webgos/internal/models"
-	"webgos/internal/xdb"
 )
 
 type AuthService interface {
@@ -29,7 +28,7 @@ func (s *authService) Login(ctx context.Context, username, password string) (str
 	jwtConfig := config.GlobalConfig.JWT
 
 	var user models.User
-	if err := xdb.GetDB().WithContext(ctx).Where("username = ?", username).Take(&user).Error; err != nil {
+	if err := ctxDB(ctx).Where("username = ?", username).Take(&user).Error; err != nil {
 		return "", errors.New("用户不存在")
 	}
 
