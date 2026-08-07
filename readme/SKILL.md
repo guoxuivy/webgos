@@ -108,13 +108,23 @@ import (
     "gorm.io/gorm"
 )
 
-// ctxDB 返回带 context 的 GORM 实例，供服务层所有数据库操作使用
+// ctxDB 返回主库（写库）的带 context 的 GORM 实例，供写操作、事务、写后读、强一致读使用
 func ctxDB(ctx context.Context) *gorm.DB {
     return xdb.GetDB().WithContext(ctx)
 }
+
+// ctxSDB 返回从库（读库）的带 context 的 GORM 实例，供普通只读查询使用
+// 注意：从库存在复制延迟，写后紧跟的读、强一致性读请使用 ctxDB 走主库
+// 当未开启读写分离（xdb.GetSlaveDB() 返回 nil）时自动回退主库，无需调用方判断
+func ctxSDB(ctx context.Context) *gorm.DB {
+    if xdb.GetSlaveDB() == nil {
+        return xdb.GetDB().WithContext(ctx)
+    }
+    return xdb.GetSlaveDB().WithContext(ctx)
+}
 ```
 
-> 注意：`WithContext` 在 GORM 中是无副作用的（仅基于全局连接池复制实例并设置 ctx 字段），因此同一函数内多次调用 `ctxDB(ctx)` 没有性能问题。在**同一事务闭包内**必须使用闭包参数 `tx`，不要再用 `ctxDB(ctx)`，否则会脱离事务另开会话。
+> 注意：`WithContext` 在 GORM 中是无副作用的（仅基于全局连接池复制实例并设置 ctx 字段），因此同一函数内多次调用 `ctxDB(ctx)` / `ctxSDB(ctx)` 没有性能问题。在**同一事务闭包内**必须使用闭包参数 `tx`，不要再用 `ctxDB(ctx)` / `ctxSDB(ctx)`，否则会脱离事务另开会话。
 
 ```go
 import (
@@ -166,7 +176,7 @@ func (s *entityNameService) SaveEntity(ctx context.Context, entity *models.Entit
 // GetEntityByID 根据ID获取实体详情
 func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.EntityName, error) {
     var entity models.EntityName
-    err := ctxDB(ctx).First(&entity, id).Error
+    err := ctxSDB(ctx).First(&entity, id).Error
     if err != nil {
         return nil, err
     }
@@ -181,7 +191,7 @@ func (s *entityNameService) GetEntityByID(ctx context.Context, id int) (*models.
 
 // GetEntityPage 分页查询实体列表
 func (s *entityNameService) GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int64) {
-    db := ctxDB(ctx).Model(&models.EntityName{})
+    db := ctxSDB(ctx).Model(&models.EntityName{})
 
     // 构建查询条件（指针类型判断参数是否存在）
     if query.Name != nil {
@@ -363,7 +373,7 @@ func init() {
 - **路由注册**：使用`init()`函数和`WrapRouter`进行路由注册
 - **中间件**：默认添加JWT认证中间件
 - **Context 传递**：服务层方法统一接收 `context.Context` 参数
-- **GORM原生操作**：服务层统一通过 `ctxDB(ctx)` 辅助函数（`xdb.GetDB().WithContext(ctx)`）进行数据库操作，不再使用 BaseModel 封装
+- **GORM原生操作**：服务层通过 `ctxDB(ctx)`（主库）与 `ctxSDB(ctx)`（从库）辅助函数进行数据库操作，按读写分离约定自行选库，不再使用 BaseModel 封装
 
 ### 服务层规范
 - **接口化设计**：定义接口 + 实现结构体
@@ -375,9 +385,10 @@ func init() {
   - `GetEntityByID(ctx context.Context, id int) (*models.EntityName, error)` - 获取详情
   - `GetEntityPage(ctx context.Context, query dto.EntityNameQuery) ([]models.EntityName, int)` - 分页查询
   - `DeleteEntity(ctx context.Context, id int) error` - 删除操作
-- **数据库操作**：使用 `ctxDB(ctx)` 辅助函数获取带上下文的 `*gorm.DB`（`xdb.GetDB().WithContext(ctx)`），上下文贯穿整条查询链路
-  - 同一函数内可多次调用 `ctxDB(ctx)`（`WithContext` 无副作用，零成本），也可在开头取一次 `db := ctxDB(ctx)` 局部变量连续使用
-  - 事务闭包内必须使用闭包参数 `tx`，不得再调用 `ctxDB(ctx)`
+- **数据库操作**：使用 `ctxDB(ctx)`（主库/写）与 `ctxSDB(ctx)`（从库/读）辅助函数获取带上下文的 `*gorm.DB`，由服务层自行决定走主库还是从库，上下文贯穿整条查询链路
+  - 同一函数内可多次调用 `ctxDB(ctx)` / `ctxSDB(ctx)`（`WithContext` 无副作用，零成本），也可在开头取一次 `db := ctxDB(ctx)` 或 `db := ctxSDB(ctx)` 局部变量连续使用
+  - **选库原则**：写操作（`Create`/`Update`/`Delete`/`Transaction`）、写前校验查询、事务闭包内、写后紧跟的读、强一致性读 → `ctxDB`；普通只读查询（`First`/`Find`/`Count`/`Pluck` 等无写入）→ `ctxSDB`
+  - 事务闭包内必须使用闭包参数 `tx`，不得再调用 `ctxDB(ctx)` / `ctxSDB(ctx)`
 
 ### 处理器层规范
 - **统一编辑接口**：使用`EntityNameEdit`方法统一处理创建和更新
@@ -413,6 +424,61 @@ func init() {
 - **模糊查询**：字符串字段使用`LIKE`进行模糊匹配
 - **分页处理**：手动计算offset，使用`Offset()`和`Limit()`方法进行分页查询
 
+## 读写分离约定
+
+项目已通过 `xdb.GetDB()`（主库）与 `xdb.GetSlaveDB()`（从库，根据 `config.GlobalConfig.Database.ReadWriteSeparation` 开关决定是否启用，启用且无备库时返回 `nil`）实现读写分离。`helper.go` 在此之上提供两个入口，由**服务层自行决定**走哪个库，不做自动推断：
+
+- `ctxDB(ctx)` —— 主库（写库）
+- `ctxSDB(ctx)` —— 从库（读库）；当 `GetSlaveDB()` 返回 `nil` 时自动回退主库，调用方无需判断
+
+### 选库原则
+
+| 场景 | 入口 |
+|------|------|
+| `Create` / `Update` / `Delete` / `Transaction` | `ctxDB` |
+| 写前校验查询（如「先查父级/查重名再写」） | `ctxDB` |
+| 写操作之后紧跟读取自己刚写入的数据（如入库后立即回读库存） | `ctxDB` |
+| 强一致性读（如支付状态、库存扣减前余额校验） | `ctxDB` |
+| 普通只读查询（`First` / `Find` / `Count` / `Pluck` 等无写入） | `ctxSDB` |
+| 事务闭包内 | 只用闭包参数 `tx`，禁止调用 `ctxDB` / `ctxSDB` |
+
+### 关键边界：从库复制延迟
+
+`ctxSDB` 读取从库，存在主从复制延迟。务必遵守：
+
+1. **不要**在写入后立即依赖从库读取自身刚写入的数据，否则可能读到旧值或空值。
+2. **不要**把「写前校验 / 强一致校验」放到从库，否则可能因延迟导致校验失效（如并发重复名、超卖）。
+3. 当未开启读写分离（`GetSlaveDB()` 返回 `nil`），`ctxSDB` 自动回退主库，行为与 `ctxDB` 一致，无需调用方特殊处理。
+
+### 推荐写法
+
+```go
+// 写操作 + 写后读自己 → 全程 ctxDB
+func (s *inventoryService) ProductOut(ctx context.Context, record *models.InventoryRecord) error {
+    db := ctxDB(ctx)
+    var product models.Product
+    if err := db.First(&product, record.ProductID).Error; err != nil { // 强一致读
+        return err
+    }
+    if product.Stock < record.Quantity {
+        return errors.New("库存不足")
+    }
+    if err := db.Create(record).Error; err != nil {
+        return err
+    }
+    product.Stock -= record.Quantity
+    return db.Updates(&product).Error
+}
+
+// 纯查询 → ctxSDB（未开启分离时自动回退主库）
+func (s *productService) GetProductByID(ctx context.Context, id string) (*models.Product, error) {
+    productID, _ := strconv.Atoi(id)
+    var product models.Product
+    err := ctxSDB(ctx).First(&product, productID).Error
+    return &product, err
+}
+```
+
 ## 重要优化点
 
 ### 1. DTO设计优化
@@ -424,7 +490,7 @@ func init() {
 - **链式构建**：使用GORM的链式查询构建器
 - **条件过滤**：通过指针判断是否添加查询条件
 - **灵活查询**：支持精确查询和模糊查询
-- **GORM原生**：通过 `ctxDB(ctx)` 进行查询（底层为 `xdb.GetDB()`）
+- **GORM原生**：通过 `ctxDB(ctx)`（写）或 `ctxSDB(ctx)`（读）进行查询，由服务层按业务自行选择主库/从库（底层分别为 `xdb.GetDB()` / `xdb.GetSlaveDB()`）
 
 ### 3. 错误处理优化
 - **统一格式**：使用`response.Error()`和`response.Success()`
@@ -445,7 +511,7 @@ func init() {
 ### 6. 模型层重构优化
 - **移除BaseModel**：不再继承BaseModel泛型基类
 - **BaseFields嵌入**：使用`BaseFields`结构体嵌入获得基础字段
-- **GORM原生操作**：服务层通过 `ctxDB(ctx)` 进行数据库操作（底层 `xdb.GetDB()`）
+- **GORM原生操作**：服务层通过 `ctxDB(ctx)`（主库）或 `ctxSDB(ctx)`（从库）进行数据库操作（底层 `xdb.GetDB()` / `xdb.GetSlaveDB()`），读写分离由服务层显式选择
 - **简化设计**：降低代码复杂度，提高可维护性
 
 ## 示例用法

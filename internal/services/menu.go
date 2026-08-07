@@ -99,19 +99,19 @@ func (s *menuService) DeleteMenu(ctx context.Context, id int) error {
 
 func (s *menuService) GetMenuByID(ctx context.Context, id int) (*models.Menu, error) {
 	var menu models.Menu
-	err := ctxDB(ctx).First(&menu, id).Error
+	err := ctxSDB(ctx).First(&menu, id).Error
 	return &menu, err
 }
 
 func (s *menuService) GetAllMenus(ctx context.Context) ([]models.Menu, error) {
 	var menus []models.Menu
-	err := ctxDB(ctx).Find(&menus).Error
+	err := ctxSDB(ctx).Find(&menus).Error
 	return menus, err
 }
 
 func (s *menuService) GetMenuTree(ctx context.Context) ([]models.Menu, error) {
 	var menus []models.Menu
-	if err := ctxDB(ctx).Order("sort ASC").Find(&menus).Error; err != nil {
+	if err := ctxSDB(ctx).Order("sort ASC").Find(&menus).Error; err != nil {
 		return nil, err
 	}
 
@@ -149,7 +149,7 @@ func (s *menuService) IsPathExists(ctx context.Context, path string, id ...int) 
 
 func (s *menuService) GetUserMenus(ctx context.Context, userID int) ([]models.Menu, error) {
 	var user models.User
-	if err := ctxDB(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -174,7 +174,7 @@ func (s *menuService) GetUserMenus(ctx context.Context, userID int) ([]models.Me
 		menuIDs = append(menuIDs, menuID)
 	}
 
-	db := ctxDB(ctx).Model(&models.Menu{}).Where("status = ? AND type != ?", 1, "button")
+	db := ctxSDB(ctx).Model(&models.Menu{}).Where("status = ? AND type != ?", 1, "button")
 	if !isSuper {
 		db = db.Where("id IN ?", menuIDs)
 	}

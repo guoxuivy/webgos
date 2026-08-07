@@ -134,7 +134,7 @@ func (s *rbacService) AssignMenusToRole(ctx context.Context, roleID int, menuIDs
 
 func (s *rbacService) GetRoleByID(ctx context.Context, id int) (*models.RBACRole, error) {
 	var role models.RBACRole
-	if err := ctxDB(ctx).Preload("Menus").First(&role, id).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Menus").First(&role, id).Error; err != nil {
 		return nil, err
 	}
 
@@ -144,7 +144,7 @@ func (s *rbacService) GetRoleByID(ctx context.Context, id int) (*models.RBACRole
 
 func (s *rbacService) GetUserRoles(ctx context.Context, userID int) ([]models.RBACRole, error) {
 	var user models.User
-	if err := ctxDB(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Roles.Menus").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (s *rbacService) GetUserRoles(ctx context.Context, userID int) ([]models.RB
 
 func (s *rbacService) GetRoles(ctx context.Context) ([]models.RBACRole, error) {
 	var roles []models.RBACRole
-	if err := ctxDB(ctx).Preload("Menus").Find(&roles).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Menus").Find(&roles).Error; err != nil {
 		return nil, err
 	}
 
@@ -179,13 +179,13 @@ func menuIDsOf(menus []models.Menu) []int {
 
 func (s *rbacService) GetPermissions(ctx context.Context) ([]models.RBACPermission, error) {
 	var permissions []models.RBACPermission
-	err := ctxDB(ctx).Find(&permissions).Error
+	err := ctxSDB(ctx).Find(&permissions).Error
 	return permissions, err
 }
 
 func (s *rbacService) GetRolePermissions(ctx context.Context, roleID int) ([]models.RBACPermission, error) {
 	var role models.RBACRole
-	if err := ctxDB(ctx).Preload("Menus.Permissions").First(&role, roleID).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Menus.Permissions").First(&role, roleID).Error; err != nil {
 		return nil, err
 	}
 
@@ -206,7 +206,7 @@ func (s *rbacService) GetRolePermissions(ctx context.Context, roleID int) ([]mod
 // GetMenuPermissions 获取菜单绑定的权限点列表（多对多）
 func (s *rbacService) GetMenuPermissions(ctx context.Context, menuID int) ([]models.RBACPermission, error) {
 	var menu models.Menu
-	if err := ctxDB(ctx).Preload("Permissions").First(&menu, menuID).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Permissions").First(&menu, menuID).Error; err != nil {
 		return nil, err
 	}
 	return menu.Permissions, nil

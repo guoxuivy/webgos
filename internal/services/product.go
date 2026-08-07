@@ -33,6 +33,6 @@ func (s *productService) GetProductByID(ctx context.Context, id string) (*models
 	}
 
 	var product models.Product
-	err = ctxDB(ctx).First(&product, productID).Error
+	err = ctxSDB(ctx).First(&product, productID).Error
 	return &product, err
 }

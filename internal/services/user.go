@@ -55,7 +55,7 @@ func (s *userService) UsersPage(ctx context.Context, query dto.UserQuery) ([]mod
 	var users []models.User
 	var total int64
 
-	db := ctxDB(ctx).Model(&models.User{})
+	db := ctxSDB(ctx).Model(&models.User{})
 
 	if query.Username != "" {
 		db = db.Where("username LIKE ?", "%"+query.Username+"%")
@@ -73,6 +73,6 @@ func (s *userService) UsersPage(ctx context.Context, query dto.UserQuery) ([]mod
 
 func (s *userService) GetUserInfo(ctx context.Context, userID int) (*models.User, error) {
 	var user models.User
-	err := ctxDB(ctx).Preload("Roles").First(&user, userID).Error
+	err := ctxSDB(ctx).Preload("Roles").First(&user, userID).Error
 	return &user, err
 }
