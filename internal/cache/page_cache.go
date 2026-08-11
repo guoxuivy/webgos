@@ -8,11 +8,11 @@ import (
 )
 
 type pageCache struct {
-	Items any `json:"items"`
-	Total int `json:"total"`
+	Items any   `json:"items"`
+	Total int64 `json:"total"`
 }
 
-func GetPage(key string, list any, total *int) bool {
+func GetPage(key string, list any, total *int64) bool {
 	data, found := GetCache().Get(key)
 	if !found {
 		return false
@@ -48,10 +48,10 @@ func GetPage(key string, list any, total *int) bool {
 	return true
 }
 
-func SetPage(key string, items any, total int) {
+func SetPage(key string, items any, total int64) {
 	SetPageWithExpiration(key, items, total, DefaultExpiration)
 }
 
-func SetPageWithExpiration(key string, items any, total int, expiration time.Duration) {
+func SetPageWithExpiration(key string, items any, total int64, expiration time.Duration) {
 	GetCache().Set(key, pageCache{Items: items, Total: total}, expiration)
 }

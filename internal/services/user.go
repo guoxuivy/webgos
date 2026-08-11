@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"webgos/internal/cache"
 	"webgos/internal/dto"
 	"webgos/internal/models"
+	"webgos/internal/xlog"
 )
 
 type UserService interface {
@@ -51,23 +53,26 @@ func (s *userService) ResetPassword(ctx context.Context, username, password stri
 	return ctxDB(ctx).Model(&user).Update("Password", user.Password).Error
 }
 
-func (s *userService) UsersPage(ctx context.Context, query dto.UserQuery) ([]models.User, int64) {
-	var users []models.User
-	var total int64
+func (s *userService) UsersPage(ctx context.Context, query dto.UserQuery) (users []models.User, total int64) {
+	cacheKey := cache.GenerateKey(cache.UserPagePrefix, query)
+	if cache.GetPage(cacheKey, &users, &total) {
+		return users, total
+	}
 
 	db := ctxSDB(ctx).Model(&models.User{})
 
 	if query.Username != "" {
 		db = db.Where("username LIKE ?", "%"+query.Username+"%")
 	}
-
 	if err := db.Count(&total).Error; err != nil {
-		return []models.User{}, 0
+		xlog.Error("user page error:%v", err)
+		return users, total
 	}
 	db = db.Scopes(models.Page(query.Page, query.PageSize))
 	if err := db.Preload("Roles").Find(&users).Error; err != nil {
-		return []models.User{}, 0
+		return users, total
 	}
+	cache.SetPage(cacheKey, users, total) // 仅成功才缓存
 	return users, total
 }
 
