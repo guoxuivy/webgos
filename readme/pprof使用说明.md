@@ -61,6 +61,7 @@ go tool trace trace.out
 ```bash
 # 起本地 Web UI（推荐，无需 graphviz）
 go tool pprof -http=:8081 http://localhost:6060/debug/pprof/profile?seconds=30
+go tool pprof cpu.prof && top
 ```
 
 ## 实测记录
