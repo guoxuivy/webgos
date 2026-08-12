@@ -63,13 +63,11 @@ func GetValidator() *validator.Validate {
 		validate = validator.New()
 		addDefaultValidations(validate)
 	})
-
 	return validate
 }
 
 // 这里可以添加一些默认的验证规则
 func addDefaultValidations(v *validator.Validate) {
-
 	// 注册标签名称函数，支持 label 标签
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		// 从结构体字段的tag中获取label的值
@@ -147,18 +145,16 @@ func getValidationMessage(e validator.FieldError) string {
 	switch e.Tag() {
 	case "required":
 		return "为必填项"
+	case "required_if_add":
+		return "为新增时的必填项"
+	case "phone":
+		return "手机号格式不正确"
+	case "email":
+		return "邮箱格式不正确"
 	case "min":
-		if e.Kind() == reflect.String {
-			return fmt.Sprintf("长度不能少于%s个字符", e.Param())
-		}
 		return fmt.Sprintf("不能小于%s", e.Param())
 	case "max":
-		if e.Kind() == reflect.String {
-			return fmt.Sprintf("长度不能超过%s个字符", e.Param())
-		}
 		return fmt.Sprintf("不能大于%s", e.Param())
-	case "email":
-		return "格式不正确"
 	case "gte":
 		return fmt.Sprintf("必须大于等于%s", e.Param())
 	case "lte":
