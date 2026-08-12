@@ -394,6 +394,10 @@ swag init -g cmd/main.go
 
 ```
 
+## 性能分析（pprof）
+
+项目内置了基于标准库 `net/http/pprof` 的性能分析能力，通过独立 debug 端口暴露。详细的开启配置、接口说明、抓取命令与实测记录见 [readme/pprof使用说明.md](readme/pprof使用说明.md)。
+
 ## 日志
 
 - **ACCESS**：访问日志，记录请求处理信息

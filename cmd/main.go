@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -62,6 +63,12 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	// kill -SIGINT 或 kill -SIGTERM 会触发优雅关闭 kill <pid> 或 kill -2 <pid>
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// 按需开启 pprof 性能分析（独立 debug 端口，不影响业务路由）
+	if globalConfig.Server.Pprof {
+		pprofServer(quit)
+	}
+
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		<-quit
@@ -80,4 +87,35 @@ func main() {
 		fmt.Printf("listen: %s\n", err)
 	}
 	<-idleConnsClosed
+}
+
+func pprofServer(quit chan os.Signal) {
+	pprofMux := http.NewServeMux()
+	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	pprofMux.Handle("/debug/pprof/block", pprof.Handler("block"))
+	pprofMux.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	pprofMux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	pprofMux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+	pprofMux.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+
+	pprofSrv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", 6060),
+		Handler: pprofMux,
+	}
+	go func() {
+		xlog.Access("pprof server started on port 6060")
+		if err := pprofSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			xlog.Access("pprof server listen error: %v", err)
+		}
+	}()
+	go func() {
+		<-quit
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = pprofSrv.Shutdown(ctx)
+	}()
 }

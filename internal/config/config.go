@@ -32,9 +32,10 @@ type Config struct {
 		Slaves []DBConfig `yaml:"slaves"`
 	} `yaml:"database"`
 	Server struct {
-		Mode string `yaml:"mode"` // "debug" 或 "release"
-		Port int    `yaml:"port"` // 服务器端口
-		Swag bool   `yaml:"swag"` // 是否启用 Swagger 文档接口
+		Mode  string `yaml:"mode"`  // "debug" 或 "release"
+		Port  int    `yaml:"port"`  // 服务器端口
+		Swag  bool   `yaml:"swag"`  // 是否启用 Swagger 文档接口
+		Pprof bool   `yaml:"pprof"` // 是否启用 pprof 性能分析接口（独立 debug 端口）
 	} `yaml:"server"`
 	Runtime struct {
 		Dir string `yaml:"dir"` // 运行时数据目录，日志、黑名单等文件均存放于此
