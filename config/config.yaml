@@ -1,6 +1,6 @@
 # 服务器配置
 server:
-  mode: "debug" # 可选值: debug, release
+  mode: "release" # 可选值: debug, release
   port: 8080
   swag: true
   pprof: true # 是否启用 pprof 性能分析（独立 debug 端口，仅本地/排查问题时开启）
@@ -23,9 +23,9 @@ runtime:
 
 # 日志配置，严格大小写
 log:
-  level: "Info" # 日志级别:  Error, Warn, Info
+  level: "Error" # 日志级别:  Error, Warn, Info
   access: true # 是记录访问日志
-  level_sql: "Info" # SQL日志级别: Silent, Error, Warn, Info
+  level_sql: "Error" # SQL日志级别: Silent, Error, Warn, Info
   
 website:
   dir: "./public" # 网站根目录
