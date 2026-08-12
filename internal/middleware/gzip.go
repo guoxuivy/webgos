@@ -28,7 +28,6 @@ func Gzip() gin.HandlerFunc {
 		c.Writer = &gzipWriter{c.Writer, gz}
 		// 处理请求
 		c.Next()
-
 	}
 }
 
