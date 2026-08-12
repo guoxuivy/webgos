@@ -2,8 +2,8 @@ package migrate
 
 import (
 	"webgos/internal/config"
-	"webgos/internal/xdb"
 	"webgos/internal/models"
+	"webgos/internal/xdb"
 	"webgos/internal/xlog"
 )
 
@@ -30,11 +30,6 @@ func migrate() error {
 	// }
 
 	// 执行自动迁移
-	// 说明：
-	// - MenuMeta 已通过 gorm:"embedded" 合并进 menus，无需单独迁移；
-	// - BaseFields 为嵌入基类，无需单独迁移；
-	// - 三张 many2many 中间表（rbac_user_roles、rbac_role_menus、rbac_menu_permissions）
-	//   均已有显式模型（RBACUserRole、RBACRoleMenu、RBACMenuPermission）。
 	return xdb.GetDB().AutoMigrate(
 		&models.Product{},
 		&models.InventoryRecord{},
