@@ -60,8 +60,19 @@ go tool trace trace.out
 
 ```bash
 # 起本地 Web UI（推荐，无需 graphviz）
-go tool pprof -http=:8081 http://localhost:6060/debug/pprof/profile?seconds=30
+curl http://localhost:6060/debug/pprof/profile?seconds=30 -o cpu.prof
 go tool pprof cpu.prof && top
+# 或者开启ui展示
+# http://localhost:8081/ui/flamegraph
+# http://localhost:8081/ui/top
+# http://localhost:8081/ui/source
+# http://localhost:8081/ui/peek
+go tool pprof -http=:8081 cpu.prof 
+
+# 或者直接查看
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+top10   # 看耗时前10函数
+# list 函数名   # 看某函数逐行耗时
 ```
 
 ## 实测记录
@@ -79,3 +90,11 @@ go tool pprof cpu.prof && top
 2. **CPU 热点**：务必在有真实业务流量时抓取 `profile`，再用 `top`/`web` 定位耗时函数。
 3. **goroutine 暴涨**：抓 `goroutine` 看是否大量阻塞在 channel / 锁 / 网络读，排查泄漏的 goroutine。
 4. **锁竞争**：抓 `mutex`；阻塞：`block`。
+
+## 压测命令
+
+```bash
+netstat -ano | grep -E ":8080|:6060" | head -3; echo "---login---"; cd /d/Goroot/webgos && curl -s -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"123456\"}"
+
+cd /d/Goroot/webgos && TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODY2OTc0MzYsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoiYWRtaW4ifQ.id2natOETsK5ERcG9V3KMKEBP5tJLa1Bq60Co8NQq2M" && hey -n 200000 -c 300 -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/menu/list 2>&1 | grep -E "Requests/sec|Slowest|Fastest|Average|99%|Status code|200"
+```
