@@ -63,7 +63,7 @@ go tool trace trace.out
 curl http://localhost:6060/debug/pprof/profile?seconds=30 -o cpu.prof
 go tool pprof cpu.prof && top
 # 或者开启ui展示
-# http://localhost:8081/ui/flamegraph
+# http://localhost:8081/ui/flamegraph # 火焰图
 # http://localhost:8081/ui/top
 # http://localhost:8081/ui/source
 # http://localhost:8081/ui/peek
@@ -96,5 +96,5 @@ top10   # 看耗时前10函数
 ```bash
 netstat -ano | grep -E ":8080|:6060" | head -3; echo "---login---"; cd /d/Goroot/webgos && curl -s -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"123456\"}"
 
-cd /d/Goroot/webgos && TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODY2OTc0MzYsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoiYWRtaW4ifQ.id2natOETsK5ERcG9V3KMKEBP5tJLa1Bq60Co8NQq2M" && hey -n 200000 -c 300 -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/menu/list 2>&1 | grep -E "Requests/sec|Slowest|Fastest|Average|99%|Status code|200"
+cd /d/Goroot/webgos && TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODY3MDA2MzAsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoiYWRtaW4ifQ.IkOtywkSDz7cQGjwIHcuQeeKmwppuDp0M20SdduGIyI" && hey -n 200000 -c 300 -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/menu/list 2>&1 | grep -E "Requests/sec|Slowest|Fastest|Average|99%|Status code|200"
 ```
