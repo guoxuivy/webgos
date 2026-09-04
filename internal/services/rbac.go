@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"errors"
+	"sort"
 	"strconv"
+	"strings"
 
 	"webgos/internal/cache"
 	"webgos/internal/dto"
@@ -20,10 +22,10 @@ type RBACService interface {
 	GetRoleByID(ctx context.Context, id int) (*models.RBACRole, error)
 	GetUserRoles(ctx context.Context, userID int) ([]models.RBACRole, error)
 	GetRoles(ctx context.Context) ([]models.RBACRole, error)
-	GetPermissions(ctx context.Context) ([]models.RBACPermission, error)
-	GetRolePermissions(ctx context.Context, roleID int) ([]models.RBACPermission, error)
-	GetMenuPermissions(ctx context.Context, menuID int) ([]models.RBACPermission, error)
-	DeletePermission(ctx context.Context, id int) error
+	GetPermissions(ctx context.Context) ([]PermissionPoint, error)
+	GetRolePermissions(ctx context.Context, roleID int) ([]models.MenuPermission, error)
+	GetMenuPermissions(ctx context.Context, menuID int) ([]models.MenuPermission, error)
+	DeletePermission(ctx context.Context, menuID int, permKey string) error
 }
 
 type rbacService struct{}
@@ -177,56 +179,76 @@ func menuIDsOf(menus []models.Menu) []int {
 	return ids
 }
 
-func (s *rbacService) GetPermissions(ctx context.Context) ([]models.RBACPermission, error) {
-	var permissions []models.RBACPermission
-	err := ctxSDB(ctx).Find(&permissions).Error
-	return permissions, err
+// PermissionPoint 实时权限点（路由投影），非持久化实体。
+type PermissionPoint struct {
+	Key         string `json:"key"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Path        string `json:"path"`
+	Method      string `json:"method"`
 }
 
-func (s *rbacService) GetRolePermissions(ctx context.Context, roleID int) ([]models.RBACPermission, error) {
+// GetPermissions 实时返回所有权限点（路由投影），不再查库，直接来自内存路由描述表。
+func (s *rbacService) GetPermissions(ctx context.Context) ([]PermissionPoint, error) {
+	points := make([]PermissionPoint, 0, len(models.RouteDescriptions))
+	for key, desc := range models.RouteDescriptions {
+		// key = path#method（小写 path + 大写 method）
+		path, method := key, ""
+		if idx := strings.LastIndex(key, "#"); idx >= 0 {
+			path, method = key[:idx], key[idx+1:]
+		}
+		points = append(points, PermissionPoint{
+			Key:         key,
+			Name:        key,
+			Description: desc,
+			Path:        path,
+			Method:      method,
+		})
+	}
+	// 按 key 排序，保证前端树渲染稳定
+	sort.Slice(points, func(i, j int) bool {
+		return points[i].Key < points[j].Key
+	})
+	return points, nil
+}
+
+func (s *rbacService) GetRolePermissions(ctx context.Context, roleID int) ([]models.MenuPermission, error) {
 	var role models.RBACRole
-	if err := ctxSDB(ctx).Preload("Menus.Permissions").First(&role, roleID).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("Menus.PermissionKeys").First(&role, roleID).Error; err != nil {
 		return nil, err
 	}
 
-	// 角色权限 = 所绑菜单下所有权限点的去重集合
-	permMap := make(map[int]models.RBACPermission)
+	// 角色权限 = 所绑菜单下所有权限键的去重集合
+	permMap := make(map[string]models.MenuPermission)
 	for _, menu := range role.Menus {
-		for _, perm := range menu.Permissions {
-			permMap[perm.ID] = perm
+		for _, perm := range menu.PermissionKeys {
+			permMap[perm.PermKey] = perm
 		}
 	}
-	permissions := make([]models.RBACPermission, 0, len(permMap))
+	permissions := make([]models.MenuPermission, 0, len(permMap))
 	for _, perm := range permMap {
 		permissions = append(permissions, perm)
 	}
 	return permissions, nil
 }
 
-// GetMenuPermissions 获取菜单绑定的权限点列表（多对多）
-func (s *rbacService) GetMenuPermissions(ctx context.Context, menuID int) ([]models.RBACPermission, error) {
+// GetMenuPermissions 获取菜单绑定的权限键列表
+func (s *rbacService) GetMenuPermissions(ctx context.Context, menuID int) ([]models.MenuPermission, error) {
 	var menu models.Menu
-	if err := ctxSDB(ctx).Preload("Permissions").First(&menu, menuID).Error; err != nil {
+	if err := ctxSDB(ctx).Preload("PermissionKeys").First(&menu, menuID).Error; err != nil {
 		return nil, err
 	}
-	return menu.Permissions, nil
+	return menu.PermissionKeys, nil
 }
 
-func (s *rbacService) DeletePermission(ctx context.Context, id int) error {
-	var permission models.RBACPermission
-	if err := ctxDB(ctx).First(&permission, id).Error; err != nil {
-		return errors.New("权限不存在")
-	}
-
-	if err := ctxDB(ctx).Transaction(func(tx *gorm.DB) error {
-		// 清除权限点-菜单关联
-		if err := tx.Model(&permission).Association("Menus").Clear(); err != nil {
-			return err
-		}
-		return tx.Delete(&permission, id).Error
-	}); err != nil {
+// DeletePermission 解绑单个菜单权限键（按 menu_id + perm_key 删除 rbac_menu_permissions 行）。
+func (s *rbacService) DeletePermission(ctx context.Context, menuID int, permKey string) error {
+	if err := ctxDB(ctx).Where("menu_id = ? AND perm_key = ?", menuID, permKey).
+		Delete(&models.MenuPermission{}).Error; err != nil {
 		return err
 	}
+	// 菜单-权限变更后，失效绑定了该菜单的角色下所有用户的权限缓存
+	InvalidateMenuPermissionCache(ctx, menuID)
 	return nil
 }
 

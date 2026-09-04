@@ -222,30 +222,29 @@ func GetPermissions(c *gin.Context) {
 	response.Success(c, "获取权限项列表成功", permissions)
 }
 
-// DeletePermission 删除权限
-// @Summary 删除权限
-// @Description 删除指定权限
+// DeletePermission 解绑菜单权限键
+// @Summary 解绑菜单权限
+// @Description 按 menu_id + perm_key 解绑单个菜单权限键
 // @Tags 角色权限
 // @Accept json
 // @Produce json
-// @Param id path int true "权限ID"
+// @Param body body dto.DeletePermissionDTO true "解绑信息"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
-// @Router /api/rbac/permission/{id} [delete]
+// @Router /api/rbac/permission [delete]
 // @Security BearerAuth
 func DeletePermission(c *gin.Context) {
 	var dtoModel dto.DeletePermissionDTO
-	if err := param.ValidateUri(c, &dtoModel); err != nil {
+	if err := param.Validate(c, &dtoModel); err != nil {
 		response.Error(c, err.Error())
 		return
 	}
 	rbacService := services.NewRBACService()
-	err := rbacService.DeletePermission(c, dtoModel.ID)
-	if err != nil {
-		response.Error(c, "删除权限失败: "+err.Error())
+	if err := rbacService.DeletePermission(c, dtoModel.MenuID, dtoModel.PermKey); err != nil {
+		response.Error(c, "解绑菜单权限失败: "+err.Error())
 		return
 	}
-	response.Success(c, "删除权限成功", nil)
+	response.Success(c, "解绑菜单权限成功", nil)
 }
 
 // GetRolePermissions 获取角色权限

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"strconv"
-	"strings"
 	"time"
 	"webgos/internal/cache"
 	"webgos/internal/config"
@@ -37,7 +36,7 @@ func RBAC() gin.HandlerFunc {
 		if !found {
 			// 缓存未命中，查询数据库
 			var user models.User
-			if err := xdb.GetDB().Preload("Roles.Menus.Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
+			if err := xdb.GetDB().Preload("Roles.Menus.PermissionKeys").Where("id = ?", userID).First(&user).Error; err != nil {
 				response.Unauthorized(c, "用户不存在")
 				return
 			}
@@ -50,8 +49,8 @@ func RBAC() gin.HandlerFunc {
 			permissions = make(map[string]bool)
 			for _, role := range user.Roles {
 				for _, menu := range role.Menus {
-					for _, perm := range menu.Permissions {
-						key := perm.Name
+					for _, perm := range menu.PermissionKeys {
+						key := perm.PermKey
 						permissions[key] = true
 					}
 				}
@@ -70,10 +69,7 @@ func RBAC() gin.HandlerFunc {
 			permissions = permissionsMap
 		}
 
-		// 检查当前请求是否有权限（统一转小写，与权限点同步时存储的 path 保持一致）
-		currentPath := strings.ToLower(c.FullPath())
-		currentMethod := strings.ToUpper(c.Request.Method)
-		requiredPermission := currentPath + "#" + currentMethod
+		requiredPermission := models.BuildPermKey(c.FullPath(), c.Request.Method)
 		if permissions[requiredPermission] {
 			c.Next()
 		} else {

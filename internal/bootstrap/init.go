@@ -34,11 +34,6 @@ func Initialize(configPath string) error {
 	// 注册路由
 	routes.New(globalConfig)
 
-	// 同步权限到数据库（根据配置决定是否收集）
-	if err := routes.SyncPermissions(xdb.GetDB()); err != nil {
-		return fmt.Errorf("Failed to sync permissions: %v", err)
-	}
-
 	return nil
 }
 

@@ -2,27 +2,13 @@ package routes
 
 import (
 	"path"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
-	"webgos/internal/config"
 	"webgos/internal/models"
 )
 
-// 存储注册的路由信息
-type RouteInfo struct {
-	Method      string
-	Path        string
-	Name        string
-	Description string
-}
-
-// 存储所有路由信息
-var routeInfos []RouteInfo
-
-// RouterWrapper 包装gin的RouterGroup，用于收集路由信息
+// RouterWrapper 包装gin的RouterGroup
 type RouterWrapper struct {
 	*gin.RouterGroup
 }
@@ -69,17 +55,10 @@ func (w *RouterWrapper) addRouteInfoWithHandlers(relativePath, method, descripti
 	case "DELETE":
 		w.RouterGroup.DELETE(relativePath, handlers...)
 	}
-	// 添加路由信息到routeInfos（只记录路径和方法，不记录中间件）
-	// 仅在配置中启用自动同步RBAC权限点时才收集路由信息
-	if config.GlobalConfig.AutoRBACPoint {
-		fullPath := strings.ToLower(w.calculateFullPath(relativePath))
-		routeInfos = append(routeInfos, RouteInfo{
-			Path:        fullPath,
-			Method:      method,
-			Description: description,
-			Name:        fullPath + "#" + method,
-		})
-	}
+	// 将路由信息写入内存描述表（key = path#method），供管理端实时列出权限点。
+	// 权限点不再持久化到数据库，始终等于真实注册的路由。
+	fullPath := w.calculateFullPath(relativePath)
+	models.RouteDescriptions[models.BuildPermKey(fullPath, method)] = description
 
 }
 func lastChar(str string) uint8 {
@@ -101,37 +80,4 @@ func (w *RouterWrapper) calculateFullPath(relativePath string) string {
 		return finalPath + "/"
 	}
 	return finalPath
-}
-
-// SyncPermissions 将收集的路由信息同步到数据库作为权限点。
-// 注意：仅负责权限点本身的同步（创建/更新描述），不做菜单归属。
-// 菜单与权限点的绑定由 AssignPermissionsToMenu 显式维护，
-// 因为菜单 path（前端路由）与接口 path（后端 API）没有必然的前缀关系，
-// 按前缀猜测归属会污染 rbac_menu_permissions 数据。
-func SyncPermissions(db *gorm.DB) error {
-	for _, route := range routeInfos {
-		// 查找是否已存在该权限
-		var existingPermission models.RBACPermission
-		result := db.Where("name = ?", route.Name).First(&existingPermission)
-
-		if result.Error != nil {
-			// 权限不存在，创建新权限
-			permission := models.RBACPermission{
-				Path:        route.Path,
-				Method:      route.Method,
-				Description: route.Description,
-				Name:        route.Name,
-			}
-			if err := db.Create(&permission).Error; err != nil {
-				return err
-			}
-		} else {
-			// 权限已存在，更新描述信息
-			existingPermission.Description = route.Description
-			if err := db.Save(&existingPermission).Error; err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

@@ -12,7 +12,7 @@ type Menu struct {
 	Meta        MenuMeta         `gorm:"embedded" json:"meta"`
 	Pid         int              `gorm:"comment:父级菜单ID" json:"pid"`
 	Children    []Menu           `gorm:"-" json:"children,omitempty"`
-	Permissions []RBACPermission `gorm:"many2many:rbac_menu_permissions" json:"permissions"`
+	PermissionKeys []MenuPermission `gorm:"foreignKey:MenuID" json:"permissions"`
 }
 
 type MenuMeta struct {

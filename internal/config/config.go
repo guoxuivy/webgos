@@ -57,8 +57,6 @@ type Config struct {
 
 	// 自动迁移配置
 	AutoMigrate bool `yaml:"auto_migrate"`
-	// 自动同步RBAC权限点
-	AutoRBACPoint bool `yaml:"auto_rbac_point"`
 	// 超级管理员账号
 	SuperAccount string `yaml:"super_account"`
 }

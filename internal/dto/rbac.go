@@ -28,10 +28,10 @@ type AssignMenusDTO struct {
 	MenuIDs []int `json:"menu_ids" validate:"required,min=1" label:"菜单ID列表"`
 }
 
-// AssignPermissionsToMenuDTO 分配权限给菜单DTO（多对多，同一权限可绑多个菜单）
+// AssignPermissionsToMenuDTO 分配权限给菜单DTO（菜单-权限键多对多，同一权限键可绑多个菜单）
 type AssignPermissionsToMenuDTO struct {
-	MenuID        int   `json:"menu_id" validate:"required" label:"菜单ID"`
-	PermissionIDs []int `json:"permission_ids" validate:"required" label:"权限ID列表"`
+	MenuID   int      `json:"menu_id" validate:"required" label:"菜单ID"`
+	PermKeys []string `json:"perm_keys" validate:"required" label:"权限键列表(path#method)"`
 }
 
 // GetRoleDTO 获取角色DTO
@@ -49,7 +49,8 @@ type GetRolePermissionsDTO struct {
 	RoleID int `uri:"id" validate:"required" label:"角色ID"`
 }
 
-// DeletePermissionDTO 删除权限DTO
+// DeletePermissionDTO 解绑菜单权限键DTO
 type DeletePermissionDTO struct {
-	ID int `uri:"id" validate:"required" label:"权限ID"`
+	MenuID  int    `json:"menu_id" validate:"required" label:"菜单ID"`
+	PermKey string `json:"perm_key" validate:"required" label:"权限键(path#method)"`
 }

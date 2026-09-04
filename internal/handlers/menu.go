@@ -346,7 +346,7 @@ func AssignPermissionsToMenu(c *gin.Context) {
 	}
 
 	menuService := services.NewMenuService()
-	if err := menuService.AssignPermissionsToMenu(c, dtoModel.MenuID, dtoModel.PermissionIDs); err != nil {
+	if err := menuService.AssignPermissionsToMenu(c, dtoModel.MenuID, dtoModel.PermKeys); err != nil {
 		response.Error(c, "绑定菜单权限失败: "+err.Error())
 		return
 	}

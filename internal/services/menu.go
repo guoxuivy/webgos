@@ -23,7 +23,7 @@ type MenuService interface {
 	IsNameExists(ctx context.Context, name string, id ...int) (bool, error)
 	IsPathExists(ctx context.Context, path string, id ...int) (bool, error)
 	GetUserMenus(ctx context.Context, userID int) ([]models.Menu, error)
-	AssignPermissionsToMenu(ctx context.Context, menuID int, permissionIDs []int) error
+	AssignPermissionsToMenu(ctx context.Context, menuID int, permKeys []string) error
 }
 
 type menuService struct{}
@@ -189,26 +189,25 @@ func (s *menuService) GetUserMenus(ctx context.Context, userID int) ([]models.Me
 	return menuTree, nil
 }
 
-// AssignPermissionsToMenu 维护菜单-权限多对多关系，支持同一权限绑定多个菜单。
-// 采用 Replace 语义，保证幂等。
-func (s *menuService) AssignPermissionsToMenu(ctx context.Context, menuID int, permissionIDs []int) error {
+// AssignPermissionsToMenu 维护菜单-权限键绑定，支持同一权限键绑定多个菜单。
+// 采用 Replace 语义，保证幂等。permKeys 为 path#method 字符串列表。
+func (s *menuService) AssignPermissionsToMenu(ctx context.Context, menuID int, permKeys []string) error {
 	var menu models.Menu
 	if err := ctxDB(ctx).First(&menu, menuID).Error; err != nil {
 		return errors.New("菜单不存在")
 	}
 
-	var permissions []models.RBACPermission
-	if len(permissionIDs) > 0 {
-		if err := ctxDB(ctx).Where("id IN ?", permissionIDs).Find(&permissions).Error; err != nil {
-			return errors.New("查询权限时出错")
-		}
-		if len(permissions) != len(permissionIDs) {
-			return errors.New("部分权限不存在")
-		}
+	permissionKeys := make([]models.MenuPermission, 0, len(permKeys))
+	for _, key := range permKeys {
+		permissionKeys = append(permissionKeys, models.MenuPermission{
+			MenuID:      menu.ID,
+			PermKey:     key,
+			Description: models.RouteDescriptions[key],
+		})
 	}
 
 	if err := ctxDB(ctx).Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&menu).Association("Permissions").Replace(permissions)
+		return tx.Model(&menu).Association("PermissionKeys").Replace(permissionKeys)
 	}); err != nil {
 		return err
 	}
