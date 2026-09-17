@@ -14,7 +14,7 @@ ifeq ($(OS),Windows_NT)
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help fmt vet test build run swagger check
+.PHONY: help fmt vet test build run swagger swag check
 
 help: ## 显示可用命令
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -34,7 +34,9 @@ build: ## 编译二进制
 run: ## 本地运行（配置默认 config/config.yaml）
 	$(GO) run cmd/main.go -c ./config/config.yaml
 
-swagger: ## 重新生成 Swagger 文档到 internal/swagger（改了注解必须跑）
+swag: ## 重新生成 Swagger 文档到 internal/swagger（改了注解必须跑）
 	$(GO) run $(SWAG_PKG) init -g cmd/main.go -o $(SWAG_OUT)
+
+swagger: swag ## 兼容旧命令，等价于 make swag
 
 check: fmt vet test build ## 一键体检：fmt + vet + test + build
