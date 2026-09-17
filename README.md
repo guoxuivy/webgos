@@ -1,27 +1,32 @@
-README.md
 # webgos 项目文档
 
+> **AI 与新同学请先读 [`AGENTS.md`](AGENTS.md)（唯一入口）。**
+
 ## 项目概述
+
 webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 Gin 和 GORM，面向可扩展的业务开发。项目目标是提供一套工程化、可测试、可扩展的模板，包含常见的鉴权、日志、请求追踪、事务、分页、统一响应等能力，帮助团队快速落地业务。
 
 ## 项目特点
+
 - **技术先进**：使用 Go 1.25 语言开发，基于 Gin 框架和 GORM ORM 工具
-- **架构清晰**：采用 MVC 架构模式，分层设计清晰
+- **架构清晰**：分层设计（Routes → Handlers → Services → Models，DTO 承载出入参）
 - **配置灵活**：支持 YAML 格式的配置文件
 - **易于扩展**：分层设计，便于新增功能集成
 - **维护性强**：统一的响应格式和完善的错误处理机制
-- **安全可靠**：基于 RBAC 的权限管理机制，自动化注册路由节点为权限点
+- **安全可靠**：基于 RBAC 的权限管理机制，路由自动注册为权限点
 - **文档完善**：集成 Swagger API 文档，便于接口调试和使用
-- **日志系统**：完善的自定义日志记录系统，支持请求追踪和问题排查
+- **日志系统**：自定义日志记录系统，支持请求追踪和问题排查
 - **优雅关闭**：支持服务的优雅启动和关闭
 - **事务支持**：提供便捷的事务处理能力，支持事务嵌套
-- **模型封装**：模型通过嵌入 `BaseFields` 获得通用基础字段，数据库操作使用 GORM 原生 API
+- **读写分离**：主库写、从库读，Service 层显式选库
+- **模型封装**：模型嵌入 `BaseFields` 获得通用基础字段，数据库操作使用 GORM 原生 API
 
 ## 技术栈
+
 - **编程语言**：Go 1.25
-- **Web 框架**：Gin
-- **ORM 框架**：GORM
-- **数据库**：MySQL（通过 gorm.io/driver/mysql）
+- **Web 框架**：Gin v1.11
+- **ORM 框架**：GORM v1.31
+- **数据库**：MySQL / PostgreSQL（`go.mod` 同时引入两个驱动，实际由配置决定）
 - **缓存**：github.com/patrickmn/go-cache
 - **配置管理**：YAML（gopkg.in/yaml.v3）
 - **数据验证**：github.com/go-playground/validator/v10
@@ -31,98 +36,103 @@ webgos 是一个基于 Go 的企业级 Web 系统快速开发脚手架，基于 
 - **测试框架**：testify
 
 ## 目录结构
+
+> 只列到**目录级**，不逐文件列举——文件清单会随代码快速漂移（历史教训：本节曾列出
+> `internal/database/`，而实际路径一直是 `internal/xdb/`）。
+
 ```
 webgos/
-├── cmd/                            # 可执行文件相关代码
-│   └── main.go                     # 程序入口文件
-├── common/                         # 常用工具代码收集
-│   ├── convert/                    # 数据类型转换工具
-│   │   └── convert.go              # 类型转换函数
-│   ├── json/                       # JSON处理工具
-│   │   └── json.go                 # JSON编解码封装
-│   ├── syncx/                      # 并发安全工具
-│   │   ├── lockedcalls.go          # 并发安全调用工具
-│   │   └── singleflight.go         # 防止缓存击穿工具
-│   └── time/                       # 时间处理工具
-│       └── time.go                 # 时间格式化和解析函数
-├── config/                         # 配置管理
-│   └── config.yaml                 # 主配置文件
-├── internal/                       # 核心业务逻辑代码
+├── AGENTS.md                       # AI / 新人工作入口（唯一入口）
+├── Makefile                        # 统一命令入口（make check / make swagger 等）
+├── cmd/                            # 程序入口（含 Swagger 通用注解 @title 等）
+├── common/                         # 通用工具（bucketx / convert / json / syncx / time）
+├── config/                         # 配置（config.yaml 不入库，见 .gitignore）
+├── internal/                       # 核心业务代码
 │   ├── bootstrap/                  # 项目启动初始化
-│   │   └── init.go                 # 项目初始化逻辑
-│   ├── config/                     # 配置加载和验证
-│   │   └── config.go               # 配置管理实现
-│   ├── database/                   # 数据库相关代码
-│   │   ├── migrate/                # 数据库迁移
-│   │   │   └── migrate.go          # 模型自动迁移逻辑
-│   │   └── db.go                   # 数据库连接和迁移逻辑
+│   ├── cache/                      # 缓存封装
+│   ├── config/                     # 配置加载与校验
 │   ├── dto/                        # 数据传输对象
-│   │   ├── inventory.go            # 库存相关DTO
-│   │   ├── menu.go                 # 菜单相关DTO
-│   │   ├── rbac.go                 # RBAC相关DTO
-│   │   └── user.go                 # 用户相关DTO
-│   ├── handlers/                   # HTTP请求处理器
-│   │   ├── auth.go                 # 认证相关请求处理
-│   │   ├── inventory.go            # 库存相关请求处理
-│   │   ├── menu.go                 # 菜单相关请求处理
-│   │   ├── product.go              # 产品相关请求处理
-│   │   ├── rbac.go                 # RBAC相关请求处理
-│   │   ├── test.go                 # 测试相关请求处理
-│   │   └── user.go                 # 用户相关请求处理
-│   ├── middleware/                 # Gin框架中间件
-│   │   ├── auth.go                 # rbac权限认证中间件
-│   │   ├── cors.go                 # 跨域中间件
-│   │   ├── debounce.go             # 防抖中间件
-│   │   ├── gzip.go                 # Gzip压缩中间件
-│   │   ├── jwt.go                  # JWT登录认证中间件
-│   │   ├── limiter.go              # IP令牌桶限流中间件
-│   │   ├── logging.go              # 日志记录中间件
-│   │   ├── middleware.go           # 中间件注册与接口定义
-│   │   ├── recovery.go             # 恢复中间件
-│   │   ├── requestid.go            # 请求ID中间件
-│   │   └── security.go             # 安全防范：敏感路径检测、恶意IP自动封禁、IP黑名单
-│   ├── models/                     # 数据访问层
-│   │   ├── base_fields.go          # 基础字段结构体
-│   │   ├── inventory_record.go     # 库存记录数据模型
-│   │   ├── menu.go                 # 菜单数据模型
-│   │   ├── product.go              # 产品数据模型
-│   │   ├── rbac.go                 # RBAC权限数据模型
-│   │   └── user.go                 # 用户数据模型
-│   ├── routes/                     # 路由注册
-│   │   ├── router_wrapper.go       # 路由注册rbac包装器
-│   │   └── routes.go               # 路由注册和管理
+│   ├── handlers/                   # HTTP 处理器
+│   ├── middleware/                 # 中间件
+│   ├── models/                     # 数据模型
+│   ├── routes/                     # 路由注册（自动同步为 RBAC 权限点）
 │   ├── services/                   # 业务逻辑层
-│   │   ├── inventory.go            # 库存业务逻辑
-│   │   ├── menu.go                 # 菜单业务逻辑
-│   │   ├── product.go              # 产品业务逻辑
-│   │   ├── rbac.go                 # RBAC业务逻辑
-│   │   └── user.go                 # 用户业务逻辑
-│   ├── utils/                      # 公共工具函数
-│   │   ├── code/                   # 业务状态码
-│   │   │   └── bizcode.go          # 业务状态码定义
-│   │   ├── param/                  # 参数处理
-│   │   │   └── validator.go        # 参数验证器
-│   │   └── response/               # 响应处理
-│   │       └── response.go         # 统一响应格式
-│   └── xlog/                       # 日志工具
-│       └── xlog.go                 # 日志系统实现
-├── readme/                         # 详细功能说明文档
-│   ├── 商品管理.md                  # 商品管理功能说明
-│   ├── 库存管理.md                  # 库存管理功能说明
-│   ├── 权限管理.md                  # 权限管理功能说明
-│   └── 菜单管理.md                  # 菜单管理功能说明
-├── docs/                           # API文档
-│   └── swagger/                    # Swagger自动生成的API文档
-├── tests/                          # 测试代码
-│   ├── integration/                # 集成测试
-│   └── unit/                       # 单元测试
-├── go.mod                          # Go模块定义文件
-├── go.sum                          # Go依赖校验文件
-├── README.md                       # 项目说明文档
-└── doc.go                          # Swagger文档入口文件
+│   ├── swagger/                    # Swagger 生成物（make swagger 生成，勿手改）
+│   ├── utils/                      # 工具：code / file / param / response
+│   ├── xdb/                        # 数据库句柄（主库 GetDB / 从库 GetSlaveDB）
+│   │   └── migrate/                # 数据库迁移
+│   └── xlog/                       # 日志
+├── docs/                           # 开发规范文档（100% 手写，无生成物）
+│   ├── backend-conventions.md      # 后端规范唯一权威源
+│   ├── dev-workflow.md             # 开发流程与收工清单
+│   ├── changes/                    # 一页纸变更记录
+│   └── templates/                  # 代码模板（crud-api.md）
+├── readme/                         # 补充功能说明（商品/库存/权限/菜单/pprof）
+├── tests/
+│   └── unit/                       # 单元测试（integration 目录暂为空）
+├── go.mod / go.sum
+└── README.md
 ```
 
+## 快速开始
+
+### 环境要求
+
+- Go 1.25 或更高版本
+- MySQL 5.7+ 或 PostgreSQL（按所用驱动选择）
+- Git
+
+### 配置
+
+在 `config/config.yaml` 中配置数据库连接、服务端口、JWT 密钥等参数。
+该文件**不入库**（见 `.gitignore`），首次部署需自行创建。
+
+### 常用命令
+
+全部统一走 `Makefile`：
+
+```bash
+make help      # 查看全部命令
+make check     # fmt + vet + test + build，一键体检
+make test      # go test ./... -count=1
+make build     # 编译
+make run       # 本地运行（默认 config/config.yaml）
+make swagger   # 重新生成 API 文档到 internal/swagger
+make fmt       # gofmt
+make vet       # go vet
+```
+
+也可以直接构建后运行：
+
+```bash
+go build -o webgos cmd/main.go
+./webgos -c ./config/config.yaml
+```
+
+服务启动后，若配置开启 Swagger，可访问 `http://localhost:<port>/swagger/index.html`。
+
+## 开发规范与 AI 协作
+
+**AI 与新同学请先读 [`AGENTS.md`](AGENTS.md)（唯一入口）。**
+
+| 内容 | 位置 |
+| --- | --- |
+| 后端规范（唯一权威源） | [`docs/backend-conventions.md`](docs/backend-conventions.md) |
+| 开发流程与收工清单 | [`docs/dev-workflow.md`](docs/dev-workflow.md) |
+| 一页纸变更模板 | [`docs/changes/`](docs/changes/README.md) |
+| CRUD 代码生成模板 | [`docs/templates/crud-api.md`](docs/templates/crud-api.md)（**仅为模板，不定义规范**） |
+
+约定：
+
+- `docs/` 是**纯手写**规范区；`internal/swagger/` 是 `make swagger` 的**生成物，勿手改**。两者已物理隔离。
+- 历史入口 `readme/backend_rules.md` 已迁移为存根，内容以 `docs/backend-conventions.md` 为准。
+- 本仓库**没有 CI 与 git 钩子**，`make check` 靠自觉执行。
+
+> 下文各章节只做**概览**；涉及"怎么写代码"的细节一律以 `docs/backend-conventions.md` 为准，
+> 避免产生第二份权威源。
+
 ## 主要功能模块
+
 - **用户管理**：用户注册、登录、登出、JWT 认证
 - **产品管理**：产品信息的增删改查
 - **库存管理**：库存记录的查询与更新、出入库操作
@@ -130,57 +140,55 @@ webgos/
 
 ## 系统架构
 
-项目采用分层架构（类似 MVC）：
+分层架构：
 
 1. **Handlers（表现层）**：处理 HTTP 请求、参数验证与响应（Gin）
-2. **Services（业务层）**：组织业务逻辑、事务边界、调用模型层
-3. **Models（数据访问层）**：定义数据结构并嵌入 `BaseFields` 获取基础字段，数据库操作通过 GORM 原生 API 在 Service 层完成
-4. **DTO（数据传输对象）**：处理入参与出参结构定义与验证
-5. **Infrastructure（基础设施）**：配置、数据库连接、日志、middleware 等
+2. **Services（业务层）**：组织业务逻辑、事务边界、数据库操作
+3. **Models（数据层）**：定义数据结构并嵌入 `BaseFields`
+4. **DTO**：入参与出参结构定义与验证
+5. **Infrastructure**：配置、数据库连接、日志、middleware 等
 
-各层通过接口与注入解耦，便于单元测试与替换实现。
+各层通过接口解耦，Service 只依赖标准库 `context.Context`（不引用 `*gin.Context`），便于独立测试。
+细节见 [`backend-conventions.md` §分层架构](docs/backend-conventions.md)。
 
 ## RBAC 权限管理系统
 
-项目实现基于角色的访问控制（RBAC）。路由在注册时会被收集并同步为权限点，权限标识采用 `路径:HTTP方法`（例如 `/api/products:GET`）。
+路由在注册时会被收集并同步为权限点，权限标识采用 `路径:HTTP方法`（例如 `/api/products:GET`）。
 
 ### 核心概念
+
 - **用户（User）**：系统的使用者，可以被分配一个或多个角色
 - **角色（Role）**：一组权限的集合，可以分配给一个或多个用户
-- **权限（Permission）**：系统中最小的不可再分的访问控制单元，由路由节点自动生成
+- **权限（Permission）**：最小的访问控制单元，由路由节点自动生成
 
 ### 权限自动生成机制
-系统实现了基于路由的权限点自动生成机制：
-1. 在路由注册时收集路由信息
-2. 系统启动时将收集到的路由信息同步到数据库作为权限点
-3. 如果权限点已存在，则更新其描述信息；如果不存在，则创建新权限点
 
-权限标识采用 `路径:HTTP方法` 的格式，例如：
-- `/api/products:GET` - 查看商品列表
-- `/api/products:POST` - 创建商品
+1. 路由注册时收集路由信息；
+2. 系统启动时将路由信息同步到数据库作为权限点；
+3. 权限点已存在则更新描述，不存在则创建。
+
+示例：`/api/products:GET` - 查看商品列表；`/api/products:POST` - 创建商品。
 
 ### 权限验证流程
-1. 使用JWT进行用户身份认证
-2. 通过RBAC中间件进行权限检查
-3. 查询当前用户是否拥有访问当前路径和方法的权限
-4. 如果有权限，则继续处理请求；否则返回403错误
+
+1. 使用 JWT 进行用户身份认证；
+2. 通过 RBAC 中间件进行权限检查；
+3. 查询当前用户是否拥有该路径与方法的权限；
+4. 有权限则继续处理，否则返回 403。
 
 ## 数据验证机制
 
-系统使用 [go-playground/validator](https://github.com/go-playground/validator) 库进行数据验证，提供以下特性：
+使用 [go-playground/validator](https://github.com/go-playground/validator) 进行入参校验，
+统一入口 `param.Validate(c, &dto)`。
 
-### 验证功能特点
-- 支持结构体字段验证
-- 支持自定义验证规则
-- 支持友好的错误消息显示
-- 支持字段标签自定义（使用label标签作为字段名）
-
-### 自定义验证规则
-系统已实现以下自定义验证规则：
-- **手机号验证**：使用`phone`标签验证中国手机号格式
+- **自定义规则**：已实现 `phone`（中国手机号格式）。
+- **`label` 标签**：用于错误消息中的中文字段名。
+- **完整验证标签表**见 [`backend-conventions.md` §参数验证标签](docs/backend-conventions.md)。
 
 ### 错误消息处理
-验证器支持通过`label`标签来自定义字段显示名称，并提供友好的错误提示信息：
+
+验证器根据 `label` 生成友好提示：
+
 - required: "为必填项"
 - min: "长度不能少于{n}个字符" 或 "不能小于{n}"
 - max: "长度不能超过{n}个字符" 或 "不能大于{n}"
@@ -189,214 +197,85 @@ webgos/
 - lte: "必须小于等于{n}"
 - oneof: "必须是{n}中的一个"
 
-## 项目初始化规范
-- `main.go`负责程序入口和启动，调用`bootstrap.Initialize()`函数
-- 将项目初始化逻辑集中到`bootstrap.Initialize()`函数中
-- `main.go`应保持简洁，只负责程序入口和启动
-- `bootstrap.Initialize()`函数接收配置参数，处理以下初始化任务:
-  - 日志系统初始化
-  - 数据库连接初始化
-  - 模型自动迁移
-  - Gin路由初始化
-  - 路由注册
-  - 权限点同步
-- 配置依赖应显式传递，避免使用全局变量
-- Initialize()函数应能接收不同的配置参数，提高灵活性
-- 数据库初始化和路由设置的依赖关系要明确
-- 统一项目初始化错误处理机制
-- main.go应通过`bootstrap.R`获取初始化后的路由引擎
-- 更清晰的错误日志输出方式
-
 ## 中间件系统
 
-系统实现了多种中间件来处理请求的前置和后置逻辑：
+全局中间件顺序（`middleware.ApplyMiddlewares`）：
+`IPBlacklist → RequestID → Recovery → Logging → CORS → Gzip`
 
-### 核心中间件
+另有安全中间件（敏感路径检测 `CheckSensitivePath`、IP 令牌桶限流 `IPLimiter`）与
+路由分组中间件（`JWT` / `Auth` / `Debounce`）。
 
-**全局中间件（在 `middleware.ApplyMiddlewares` 中注册，按以下顺序执行）**
-1. **IPBlacklist中间件**：最高优先级拦截，拒绝黑名单中的 IP（精确 IP 与 CIDR 网段），黑名单持久化到 `blacklist.json` 并每 5 分钟自动保存
-2. **RequestID中间件**：为每个请求生成唯一标识，用于日志追踪
-3. **Recovery中间件**：捕获系统 panic，防止服务崩溃
-4. **Logging中间件**：记录请求日志，便于问题追踪
-5. **CORS中间件**：处理跨域请求
-6. **Gzip中间件**：对响应进行 Gzip 压缩，降低传输体积
-
-**安全防范中间件**
-- **敏感路径检测（CheckSensitivePath）**：在全局 404 handler 中调用，匹配 `.env`、`.git`、`phpmyadmin`、`wp-admin`、`.sql`、备份/压缩包等敏感路径与 `/shell`、`/exec` 等危险关键字；命中按时间窗口（1 小时）计数，达到阈值（5 次）自动将该 IP 加入黑名单
-- **IP 限流（IPLimiter）**：基于令牌桶（每个 IP 独立桶）的限流，用于 `/api/auth/login` 等高风险路由防爆破，例如 `IPLimiter(1, 1)` 表示每秒 1 个请求、桶容量 1（不允许突发），超限返回 500
-
-**路由分组中间件**
-- **JWT中间件**：处理用户身份认证（登录态校验）
-- **Auth中间件**：处理 RBAC 权限验证（路由即权限点）
-- **Debounce中间件**：防止重复提交
-
-### 中间件执行顺序
-```
-全局：IPBlacklist -> RequestID -> Recovery -> Logging -> CORS -> Gzip
-路由组（如 /api/auth）：JWT -> Auth -> IPLimiter -> 业务处理
-404 处理：CheckSensitivePath（命中则记录并可能触发 IP 自动封禁）
-```
+> 完整说明（含黑名单持久化、限流阈值、执行顺序图）见
+> [`backend-conventions.md` §中间件](docs/backend-conventions.md)。
 
 ## 数据库连接池配置
 
-项目中使用 GORM 管理数据库连接，并配置了连接池参数：
+使用 GORM 管理连接，连接池参数：
 
-### 连接池配置
 - **最大打开连接数**：10
 - **最大空闲连接数**：5
-- **连接的最大生命周期**：1小时
+- **连接的最大生命周期**：1 小时
 
-这些参数可以根据实际需求在 [database/db.go](file:///d:/Goroot/webgos/internal/database/db.go) 文件中进行调整。
+可在 `internal/xdb/` 中调整。
 
 ## 统一响应格式
 
-系统采用统一的 JSON 响应格式：
+统一 JSON 响应（结构定义见 `internal/utils/response/response.go`）：
 
 ```json
 {
-  "code": 200,
-  "msg": "success",
-  "data": {}
+  "code": 0,
+  "message": "success",
+  "data": {},
+  "request_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
-- `code`：优先表示业务状态码（项目约定），同时可映射为 HTTP 状态码；请参阅 `internal/utils/response/response.go` 的实现。
-- `msg`：描述信息
-- `data`：返回的数据体
+- `code`：**业务状态码**，`0` 为成功、`1` 为失败（常量见 `internal/utils/code/bizcode.go`）；
+  HTTP 状态码由响应函数另行设置（如 401 / 403）。
+- `message`：描述信息
+- `data`：返回的数据体（成功时可能为 `null`）
+- `request_id`：请求追踪 ID，由 RequestID 中间件生成
 
-注意：项目中已经有 `response` 工具用于统一封装响应，调用方应按照库提供的方法传入明确的 HTTP 状态码与业务码。
+调用方统一使用 `response.Success / Error / Unauthorized / Forbidden / ErrorWithCode`，
+不自己拼 JSON。细节见 [`backend-conventions.md` §统一响应](docs/backend-conventions.md)。
 
-## 模型层与数据库操作说明
+## 模型层与数据库操作
 
-模型定义放在 `internal/models/` 中，各模型通过嵌入 `BaseFields` 结构体获得 `ID`、`CreatedAt`、`UpdatedAt`、`DeletedAt` 等通用基础字段，自身只声明业务字段。
+模型定义在 `internal/models/`，嵌入 `BaseFields` 获得 `ID` / `CreatedAt` / `UpdatedAt` / `DeletedAt`。
 
-数据库操作不再经过泛型 `BaseModel` 封装，而是由 **Service 层直接使用 GORM 原生 API**（如 `xdb.GetDB().WithContext(ctx).Where(...).Find(&items)`）完成，事务通过 `xdb.GetDB().Transaction(func(tx *gorm.DB) error { ... })` 处理。
-
-Service 层所有业务方法首参数统一为 `ctx context.Context`，用于请求级超时与取消。Handler 调用时直接传入 `c *gin.Context` 即可（`gin.Context` 实现了 `context.Context` 接口），无需取 `c.Request.Context()`；Service 内部通过 `xdb.GetDB().WithContext(ctx)` 使用上下文，不直接引用 `*gin.Context`，因此 Service 与 Gin 保持解耦，可独立测试。
-
-模型定义示例：
-
-```go
-type User struct {
-	models.BaseFields
-	Username string `gorm:"size:64;uniqueIndex" json:"username"`
-	Password string `json:"-"`
-}
-```
-
-Service 层使用 GORM 原生操作示例：
+数据库操作由 **Service 层直接使用 GORM 原生 API** 完成，通过 `ctxDB(ctx)`（主库/写）与
+`ctxSDB(ctx)`（从库/读）获取带上下文的 `*gorm.DB`：
 
 ```go
 func (s *userService) GetUserInfo(ctx context.Context, id int) (*models.User, error) {
-	var u models.User
-	if err := xdb.GetDB().WithContext(ctx).First(&u, id).Error; err != nil {
-		return nil, err
-	}
-	return &u, nil
+    var u models.User
+    if err := ctxSDB(ctx).First(&u, id).Error; err != nil {
+        return nil, err
+    }
+    return &u, nil
 }
 ```
 
-## 开发与部署
+Service 方法首参数统一为 `ctx context.Context`；Handler 调用时直接传 `c *gin.Context`。
+细节（选库原则、事务、JSONB 序列化）见 [`backend-conventions.md`](docs/backend-conventions.md)。
 
-### 开发环境要求
-- Go 1.25 或更高版本
-- MySQL 5.7 或更高版本
-- Git 版本管理工具
+## 项目初始化
 
-### 配置文件
-在 [config/config.yaml](file:///d:/Goroot/webgos/config/config.yaml) 中配置数据库连接、服务端口、JWT密钥等参数。
-
-### 构建和运行
-```bash
-# 克隆项目
-git clone <项目地址>
-
-# 进入项目目录
-cd webgos
-
-# 安装依赖
-go mod tidy
-
-# 构建项目
-go build -o webgos cmd/main.go
-
-# 运行项目
-./webgos
-```
-
-### 命令行参数
-```bash
-# 指定配置文件路径
-./webgos -c ./config/config.yaml
-```
-
-### 优雅关闭
-项目支持优雅关闭，使用 `kill <pid>` 或 `Ctrl+C` 可以安全关闭服务。
+初始化逻辑集中在 `internal/bootstrap`，`cmd/main.go` 只负责入口与启动。
+规范见 [`backend-conventions.md` §项目初始化规范](docs/backend-conventions.md)。
 
 ## 测试
 
-项目包含单元测试和集成测试，目录为 `tests/unit` 与 `tests/integration`。注意：直接对 `./tests` 顶层运行 `go test ./tests` 会失败（因为顶层目录没有 Go 包文件），应使用子包路径或 `./...` 模式。
-
-运行建议：
-
 ```bash
-# 运行所有测试（包括 tests 下的子包）
-go test ./... -v
-
-# 仅运行所有单元测试
-go test ./tests/unit/... -v
-
-# 仅运行所有集成测试
-go test ./tests/integration/... -v
-
-# 生成覆盖率
-go test ./... -coverprofile=coverage.out
-go tool cover -html=coverage.out
+make test                      # 等价于 go test ./... -count=1
+go test ./tests/unit/... -v    # 仅单元测试
+go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out
 ```
 
-集成测试会访问数据库，请务必使用独立的测试数据库并在测试完成后清理测试数据。
-
-
-## 常用命令
-```bash
-# 安装依赖
-go mod tidy
-
-# 构建（Windows）
-go build -o webgos.exe cmd/main.go
-
-# 构建（Linux）
-GOOS=linux GOARCH=amd64 go build -o webgos cmd/main.go
-
-# 运行（示例）
-./webgos -c ./config/config.yaml
-
-# 安全停止（示例）
-kill <pid>
-
-# 后台运行（示例）
-nohup ./webgos -c ./config/config.yaml > /dev/null 2>&1 &
-```
-
-## Swagger 文档生成
-
-如果你需要生成 Swagger 文档并查看接口说明，可以使用 swag 工具（swaggo）。下面是常用的步骤：
-
-```bash
-# 安装 swag（仅需一次）
-go install github.com/swaggo/swag/cmd/swag@latest
-
-# 在项目根目录生成 Swagger 注释（默认会在 ./docs 目录生成）
-swag init -g cmd/main.go
-
-# 生成后启动服务并访问 Swagger UI：
-# 访问: http://localhost:8080/swagger/index.html
-
-```
-
-## 性能分析（pprof）
-
-项目内置了基于标准库 `net/http/pprof` 的性能分析能力，通过独立 debug 端口暴露。详细的开启配置、接口说明、抓取命令与实测记录见 [readme/pprof使用说明.md](readme/pprof使用说明.md)。
+- 当前只有 `tests/unit` 有用例，`tests/integration` 目录暂为空。
+- 注意：直接 `go test ./tests` 会失败（顶层目录没有 Go 包文件），应使用子包路径或 `./...`。
+- 涉及数据库的测试请使用独立的测试数据库，并在测试后清理数据。
 
 ## 日志
 
@@ -405,28 +284,39 @@ swag init -g cmd/main.go
 - **ERROR**：错误日志
 - **DEBUG**：调试日志
 - **WARN**：警告日志
-- **SQL**：SQL执行日志
+- **SQL**：SQL 执行日志
 
 ### 日志格式
-日志文件按日期和级别分割存储在 `logs` 目录下，格式为：
+
+日志文件按日期和级别分割存储在 `logs` 目录下：
+
 ```
 [ACCESS] RequestID=550e8400-e29b-41d4-a716-446655440000 [POST] /users/login 192.168.1.100 200 45ms
 ```
 
 ### 日志系统特性
-1. **多级别日志记录**：支持不同级别的日志记录和过滤
-2. **日志文件分割**：按日期和级别分割日志文件，便于管理
-3. **控制台彩色输出**：在控制台中以不同颜色显示不同级别的日志
-4. **异步日志写入**：通过缓冲通道实现异步日志写入，提高性能
-5. **请求追踪**：与RequestID中间件配合，实现请求全链路追踪
+
+1. 多级别日志记录与过滤
+2. 日志文件按日期和级别分割
+3. 控制台彩色输出
+4. 异步日志写入（缓冲通道）
+5. 请求追踪：与 RequestID 中间件配合实现全链路追踪
+
+## 性能分析（pprof）
+
+内置基于标准库 `net/http/pprof` 的性能分析，通过独立 debug 端口暴露。
+开启方式、接口说明与抓取命令见 [readme/pprof.md](readme/pprof.md)。
+
+## Swagger 文档
+
+修改 Handler 上的 Swagger 注解后，执行：
+
+```bash
+make swagger   # 生成到 internal/swagger（不要手敲 swag init，否则会生成回 docs/）
+```
+
+启动服务后访问 `http://localhost:<port>/swagger/index.html`。
 
 ## 许可证
-本项目采用随便玩许可证，详情见 [LICENSE](LICENSE) 文件。
 
-## 开发命令
-```bash
-swag init -g cmd/main.go
-# 访问: http://localhost:8080/swagger/index.html
-
-go run cmd/main.go -c ./config/config.yaml
-```
+暂未指定（仓库中暂无 LICENSE 文件）。

@@ -3,15 +3,15 @@ package models
 type Menu struct {
 	BaseFields
 
-	Name        string           `gorm:"size:50;not null;comment:菜单名称" json:"name"`
-	Path        string           `gorm:"size:255;comment:路由路径" json:"path"`
-	Component   string           `gorm:"size:255;comment:组件路径" json:"component"`
-	Type        string           `gorm:"size:20;not null;comment:菜单类型" json:"type"`
-	Status      int              `gorm:"default:1;comment:状态 0-禁用 1-启用" json:"status"`
-	Redirect    string           `gorm:"-" json:"redirect"`
-	Meta        MenuMeta         `gorm:"embedded" json:"meta"`
-	Pid         int              `gorm:"comment:父级菜单ID" json:"pid"`
-	Children    []Menu           `gorm:"-" json:"children,omitempty"`
+	Name           string           `gorm:"size:50;not null;comment:菜单名称" json:"name"`
+	Path           string           `gorm:"size:255;comment:路由路径" json:"path"`
+	Component      string           `gorm:"size:255;comment:组件路径" json:"component"`
+	Type           string           `gorm:"size:20;not null;comment:菜单类型" json:"type"`
+	Status         int              `gorm:"default:1;comment:状态 0-禁用 1-启用" json:"status"`
+	Redirect       string           `gorm:"-" json:"redirect"`
+	Meta           MenuMeta         `gorm:"embedded" json:"meta"`
+	Pid            int              `gorm:"comment:父级菜单ID" json:"pid"`
+	Children       []Menu           `gorm:"-" json:"children,omitempty"`
 	PermissionKeys []MenuPermission `gorm:"foreignKey:MenuID" json:"permissions"`
 }
 

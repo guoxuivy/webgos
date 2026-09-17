@@ -1,0 +1,1489 @@
+basePath: /
+definitions:
+  dto.AddDepartmentDTO:
+    properties:
+      leader_id:
+        minimum: 1
+        type: integer
+      name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      parent_id:
+        minimum: 0
+        type: integer
+      remark:
+        maxLength: 200
+        type: string
+      sort:
+        minimum: 0
+        type: integer
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - name
+    type: object
+  dto.AddRoleDTO:
+    properties:
+      menu_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+      remark:
+        maxLength: 200
+        type: string
+      status:
+        description: 0-禁用 1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - name
+    type: object
+  dto.AssignMenusDTO:
+    properties:
+      menu_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      role_id:
+        type: integer
+    required:
+    - menu_ids
+    - role_id
+    type: object
+  dto.AssignPermissionsToMenuDTO:
+    properties:
+      menu_id:
+        type: integer
+      perm_keys:
+        items:
+          type: string
+        type: array
+    required:
+    - menu_id
+    - perm_keys
+    type: object
+  dto.AssignRolesDTO:
+    properties:
+      role_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      user_id:
+        type: integer
+    required:
+    - role_ids
+    - user_id
+    type: object
+  dto.BatchUpdateDeptUsersDTO:
+    properties:
+      user_ids:
+        items:
+          type: integer
+        type: array
+    required:
+    - user_ids
+    type: object
+  dto.DeletePermissionDTO:
+    properties:
+      menu_id:
+        type: integer
+      perm_key:
+        type: string
+    required:
+    - menu_id
+    - perm_key
+    type: object
+  dto.EditDepartmentDTO:
+    properties:
+      id:
+        minimum: 1
+        type: integer
+      leader_id:
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      parent_id:
+        minimum: 0
+        type: integer
+      remark:
+        maxLength: 200
+        type: string
+      sort:
+        minimum: 0
+        type: integer
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - id
+    type: object
+  dto.EditRoleDTO:
+    properties:
+      id:
+        type: integer
+      menu_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+      remark:
+        maxLength: 200
+        type: string
+      status:
+        description: 0-禁用 1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - id
+    type: object
+  dto.GetRoleDTO:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  dto.GetRolePermissionsDTO:
+    properties:
+      roleID:
+        type: integer
+    required:
+    - roleID
+    type: object
+  dto.GetUserRolesDTO:
+    properties:
+      userID:
+        type: integer
+    required:
+    - userID
+    type: object
+  dto.Login:
+    properties:
+      password:
+        description: 密码
+        minLength: 6
+        type: string
+      username:
+        description: 用户名
+        maxLength: 20
+        minLength: 2
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.MenuDTO:
+    properties:
+      component:
+        type: string
+      meta:
+        $ref: '#/definitions/models.MenuMeta'
+      name:
+        type: string
+      path:
+        type: string
+      pid:
+        type: integer
+      status:
+        description: 0-禁用 1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+      type:
+        enum:
+        - catalog
+        - menu
+        - button
+        - embedded
+        - link
+        type: string
+    required:
+    - meta
+    - name
+    - status
+    - type
+    type: object
+  dto.UserQuery:
+    properties:
+      page:
+        minimum: 1
+        type: integer
+      pageSize:
+        maximum: 100
+        minimum: 1
+        type: integer
+      username:
+        maxLength: 20
+        minLength: 2
+        type: string
+    type: object
+  dto.UserRegister:
+    properties:
+      age:
+        description: 年龄
+        maximum: 150
+        minimum: 0
+        type: integer
+      email:
+        description: 邮箱
+        type: string
+      gender:
+        description: 性别
+        enum:
+        - male
+        - female
+        type: string
+      id:
+        description: id
+        minimum: 0
+        type: integer
+      nickname:
+        description: 昵称
+        maxLength: 20
+        minLength: 2
+        type: string
+      password:
+        description: 明文，仅用于验证
+        minLength: 6
+        type: string
+      phone:
+        description: 手机号码
+        type: string
+      roleIds:
+        description: 角色ID列表
+        items:
+          type: integer
+        type: array
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
+      username:
+        description: 用户名
+        maxLength: 20
+        minLength: 2
+        type: string
+    required:
+    - username
+    type: object
+  models.InventoryRecord:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      productID:
+        type: integer
+      quantity:
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Menu:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/models.Menu'
+        type: array
+      component:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      meta:
+        $ref: '#/definitions/models.MenuMeta'
+      name:
+        type: string
+      path:
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/models.MenuPermission'
+        type: array
+      pid:
+        type: integer
+      redirect:
+        type: string
+      status:
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.MenuMeta:
+    properties:
+      affixTab:
+        type: boolean
+      authority:
+        items:
+          type: string
+        type: array
+      badge:
+        type: string
+      badgeType:
+        type: string
+      badgeVariants:
+        type: string
+      hideChildrenInMenu:
+        type: boolean
+      hideInBreadcrumb:
+        type: boolean
+      hideInMenu:
+        type: boolean
+      hideInTab:
+        type: boolean
+      icon:
+        type: string
+      iframeSrc:
+        type: string
+      keepAlive:
+        type: boolean
+      link:
+        type: string
+      menuVisibleWithForbidden:
+        type: boolean
+      sort:
+        type: integer
+      title:
+        type: string
+    type: object
+  models.MenuPermission:
+    properties:
+      description:
+        type: string
+      menu_id:
+        type: integer
+      perm_key:
+        type: string
+    type: object
+  models.Product:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      stock:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.RBACRole:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: integer
+      menu_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+      remark:
+        type: string
+      status:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.User:
+    properties:
+      age:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      department_id:
+        type: integer
+      email:
+        type: string
+      gender:
+        type: string
+      id:
+        type: integer
+      nickname:
+        type: string
+      phone:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/models.RBACRole'
+        type: array
+      status:
+        type: integer
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+      request_id:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: webgos 企业资源计划系统 API 文档
+  title: webgos API
+  version: "1.0"
+paths:
+  /api/department:
+    post:
+      consumes:
+      - application/json
+      description: 创建新部门
+      parameters:
+      - description: 部门信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddDepartmentDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建部门
+      tags:
+      - 部门管理
+    put:
+      consumes:
+      - application/json
+      description: 更新部门信息
+      parameters:
+      - description: 部门信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EditDepartmentDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新部门
+      tags:
+      - 部门管理
+  /api/department/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定部门（级联删除子部门）
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除部门
+      tags:
+      - 部门管理
+  /api/department/{id}/users:
+    post:
+      consumes:
+      - application/json
+      description: 批量将用户添加到指定部门
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 用户ID列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchUpdateDeptUsersDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 批量添加部门用户
+      tags:
+      - 部门管理
+  /api/department/tree:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有部门的树形结构
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取部门树形结构
+      tags:
+      - 部门管理
+  /api/department/user/{userID}:
+    delete:
+      consumes:
+      - application/json
+      description: 将用户从部门中移除
+      parameters:
+      - description: 用户ID
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 移除部门用户
+      tags:
+      - 部门管理
+  /api/inventory/in:
+    post:
+      consumes:
+      - application/json
+      description: 产品入库操作
+      parameters:
+      - description: 入库参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.InventoryRecord'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 产品入库
+      tags:
+      - 库存
+  /api/inventory/out:
+    post:
+      consumes:
+      - application/json
+      description: 产品出库操作
+      parameters:
+      - description: 出库参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.InventoryRecord'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 产品出库
+      tags:
+      - 库存
+  /api/menu:
+    post:
+      consumes:
+      - application/json
+      description: 创建新菜单
+      parameters:
+      - description: 菜单参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.MenuDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建菜单
+      tags:
+      - 菜单管理
+  /api/menu/:id:
+    delete:
+      consumes:
+      - application/json
+      description: 删除菜单
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除菜单
+      tags:
+      - 菜单管理
+    get:
+      consumes:
+      - application/json
+      description: 获取菜单详情
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 菜单详情
+      tags:
+      - 菜单管理
+  /api/menu/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 编辑菜单信息
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 菜单参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.MenuDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑菜单
+      tags:
+      - 菜单管理
+  /api/menu/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有菜单列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取菜单列表
+      tags:
+      - 菜单管理
+  /api/menu/name_exists:
+    get:
+      consumes:
+      - application/json
+      description: 检查菜单名称是否存在
+      parameters:
+      - description: 菜单名称
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: 菜单ID（编辑时用于排除自身）
+        in: query
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 检查菜单名称是否存在
+      tags:
+      - 菜单管理
+  /api/menu/path_exists:
+    get:
+      consumes:
+      - application/json
+      description: 检查菜单路径是否存在
+      parameters:
+      - description: 菜单路径
+        in: query
+        name: path
+        required: true
+        type: string
+      - description: 菜单ID（编辑时用于排除自身）
+        in: query
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 检查菜单路径是否存在
+      tags:
+      - 菜单管理
+  /api/menu/permissions:
+    post:
+      consumes:
+      - application/json
+      description: 将权限点集合绑定到指定菜单
+      parameters:
+      - description: 绑定信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignPermissionsToMenuDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 绑定菜单权限
+      tags:
+      - 菜单管理
+  /api/menu/permissions/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定菜单所绑定的所有权限点（多对多）
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取菜单权限
+      tags:
+      - 菜单管理
+  /api/menu/tree:
+    get:
+      consumes:
+      - application/json
+      description: 获取菜单树结构
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取菜单树
+      tags:
+      - 菜单管理
+  /api/menu/user_menus:
+    get:
+      consumes:
+      - application/json
+      description: 根据当前登录用户的ID，获取其拥有的角色所关联的菜单权限树
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Menu'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户的菜单树
+      tags:
+      - 菜单管理
+  /api/products/{id}:
+    get:
+      description: 根据ID获取商品详情
+      parameters:
+      - description: 商品ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取商品详情
+      tags:
+      - 商品
+  /api/products/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增商品
+      parameters:
+      - description: 商品参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建商品
+      tags:
+      - 商品
+  /api/rbac/assign_menus:
+    post:
+      consumes:
+      - application/json
+      description: 给角色分配菜单，角色通过菜单间接获得权限
+      parameters:
+      - description: 菜单分配信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignMenusDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配菜单给角色
+      tags:
+      - 角色权限
+  /api/rbac/assign_roles:
+    post:
+      consumes:
+      - application/json
+      description: 给用户分配角色
+      parameters:
+      - description: 角色分配信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignRolesDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配角色给用户
+      tags:
+      - 角色权限
+  /api/rbac/edit_role:
+    post:
+      consumes:
+      - application/json
+      description: 更新角色信息
+      parameters:
+      - description: 角色信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EditRoleDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑角色
+      tags:
+      - 角色权限
+  /api/rbac/permission:
+    delete:
+      consumes:
+      - application/json
+      description: 按 menu_id + perm_key 解绑单个菜单权限键
+      parameters:
+      - description: 解绑信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DeletePermissionDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 解绑菜单权限
+      tags:
+      - 角色权限
+  /api/rbac/permissions:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有权限列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取权限列表
+      tags:
+      - 角色权限
+  /api/rbac/role:
+    post:
+      consumes:
+      - application/json
+      description: 创建新角色
+      parameters:
+      - description: 角色信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddRoleDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建角色
+      tags:
+      - 角色权限
+  /api/rbac/role/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取角色详情
+      parameters:
+      - description: 查询参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GetRoleDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色详情
+      tags:
+      - 角色权限
+  /api/rbac/role_permissions/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定角色的权限列表
+      parameters:
+      - description: 查询参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GetRolePermissionsDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色的权限列表
+      tags:
+      - 角色权限
+  /api/rbac/roles:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有角色列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色列表
+      tags:
+      - 角色权限
+  /api/rbac/user_roles/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定用户的角色列表
+      parameters:
+      - description: 查询参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GetUserRolesDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户的角色列表
+      tags:
+      - 角色权限
+  /api/user/edit:
+    post:
+      consumes:
+      - application/json
+      description: 创建或更新用户信息
+      parameters:
+      - description: 用户信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserRegister'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑用户信息
+      tags:
+      - 用户管理
+  /api/user/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前登录用户信息
+      tags:
+      - 用户管理
+  /api/user/list:
+    post:
+      consumes:
+      - application/json
+      description: 分页获取用户列表
+      parameters:
+      - description: 查询参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserQuery'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户列表
+      tags:
+      - 用户管理
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录接口
+      parameters:
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'data={accessToken: string}'
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户登录
+      tags:
+      - 登录
+  /auth/logout:
+    post:
+      description: 用户登出接口
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户登出
+      tags:
+      - 登录
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 用户注册接口
+      parameters:
+      - description: 用户注册参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserRegister'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户注册
+      tags:
+      - 登录
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: 重置密码接口
+      parameters:
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 重置密码 测试专用
+      tags:
+      - 登录
+securityDefinitions:
+  BearerAuth:
+    description: JWT认证方式，值为"Bearer {token}"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

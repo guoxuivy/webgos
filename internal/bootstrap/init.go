@@ -3,9 +3,9 @@ package bootstrap
 import (
 	"fmt"
 	"webgos/internal/config"
+	"webgos/internal/routes"
 	"webgos/internal/xdb"
 	"webgos/internal/xdb/migrate"
-	"webgos/internal/routes"
 	"webgos/internal/xlog"
 )
 

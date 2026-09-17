@@ -352,4 +352,3 @@ func AssignPermissionsToMenu(c *gin.Context) {
 	}
 	response.Success(c, "绑定菜单权限成功", nil)
 }
-

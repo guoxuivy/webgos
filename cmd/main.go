@@ -16,7 +16,7 @@ import (
 	"webgos/internal/routes"
 	"webgos/internal/xlog"
 
-	_ "webgos/docs"
+	_ "webgos/internal/swagger"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"

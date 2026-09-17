@@ -3,10 +3,9 @@
 /.vscode
 /.codebuddy
 /cmd/logs
-/tests/logs
+/tests/**/logs
 /frontend
 /logs
-/docs
 /uploads
 /config/config.yaml
 /runtime

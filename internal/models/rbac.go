@@ -14,12 +14,12 @@ func BuildPermKey(path, method string) string {
 
 type RBACRole struct {
 	BaseFields
-	Name        string    `gorm:"size:50;unique" json:"name"`
-	Remark      string    `gorm:"size:200" json:"remark"`
-	Status      int       `gorm:"default:1;comment:状态 0-禁用 1-启用" json:"status"`
-	Users       []User    `gorm:"many2many:rbac_user_roles;" json:"-"`
-	Menus       []Menu    `gorm:"many2many:rbac_role_menus" json:"-"`
-	MenuIDs     []int     `gorm:"-" json:"menu_ids"`
+	Name    string `gorm:"size:50;unique" json:"name"`
+	Remark  string `gorm:"size:200" json:"remark"`
+	Status  int    `gorm:"default:1;comment:状态 0-禁用 1-启用" json:"status"`
+	Users   []User `gorm:"many2many:rbac_user_roles;" json:"-"`
+	Menus   []Menu `gorm:"many2many:rbac_role_menus" json:"-"`
+	MenuIDs []int  `gorm:"-" json:"menu_ids"`
 }
 
 func (RBACRole) TableName() string {
