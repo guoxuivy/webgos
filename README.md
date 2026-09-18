@@ -51,6 +51,7 @@ webgos/
 │   ├── bootstrap/                  # 项目启动初始化
 │   ├── cache/                      # 缓存封装
 │   ├── config/                     # 配置加载与校验
+│   ├── cron/                       # 定时任务（各文件 init 里 Register，bootstrap 统一启停）
 │   ├── dto/                        # 数据传输对象
 │   ├── handlers/                   # HTTP 处理器
 │   ├── middleware/                 # 中间件

@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"fmt"
 	"webgos/internal/config"
+	"webgos/internal/cron"
 	"webgos/internal/routes"
 	"webgos/internal/xdb"
 	"webgos/internal/xdb/migrate"
@@ -34,12 +35,17 @@ func Initialize(configPath string) error {
 	// 注册路由
 	routes.New(globalConfig)
 
+	// 启动定时任务：任务在各文件 init 中 Register，此处统一拉起
+	cron.SetUp()
+
 	return nil
 }
 
 func Close() {
 	xlog.Access("Closing resources...")
 	xdb.CloseDB()
+	// 等待在途定时任务跑完再关日志组件，否则 ShutDown 的收尾日志会打到已关闭的 logger
+	cron.ShutDown()
 	if xlog.Xlogger != nil {
 		xlog.Xlogger.Close()
 	}
