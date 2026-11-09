@@ -33,6 +33,7 @@ internal/
 ├── bootstrap/     # 项目启动初始化
 ├── cache/         # 缓存封装
 ├── config/        # 配置加载与校验
+├── cron/          # 定时任务（Job 注册 / 调度 / 优雅停止）
 ├── dto/           # 数据传输对象（请求参数 / 响应数据）
 ├── handlers/      # HTTP 处理器（参数校验 → 调 Service → 统一响应）
 ├── middleware/    # 中间件（JWT / CORS / 日志 / 限流 / 安全等）
@@ -405,8 +406,63 @@ func init() {
 - `cmd/main.go` **只负责程序入口与启动**，保持简洁：解析 `-c` 配置路径 → 调用
   `bootstrap.Initialize(*configPath)` → 构造 `http.Server` 并启动 → 优雅关闭。
 - 初始化逻辑集中在 `internal/bootstrap`，`Initialize()` **接收配置路径参数**，依次完成：
-  日志系统初始化 → 数据库连接初始化 → 模型自动迁移 → Gin 路由初始化 → 路由注册 → 权限点同步。
+  日志系统初始化 → 数据库连接初始化 → 模型自动迁移 → Gin 路由初始化 → 路由注册 → 权限点同步
+  → 启动定时任务（`cron.SetUp()`）。
 - 初始化后的 Gin 引擎通过 **`routes.REngine`** 获取（`main.go` 用它注册业务路由与 Swagger 路由）。
 - 配置依赖**显式传递**，避免隐式全局状态；统一初始化错误处理，`Initialize` 返回 error 由 `main` 处理。
 - 优雅关闭：`defer bootstrap.Close()`，并监听 `SIGINT` / `SIGTERM`，用带超时的 `context`
-  调用 `srv.Shutdown`。
+  调用 `srv.Shutdown`；`Close()` 中依次关闭数据库连接、`cron.ShutDown()` 等待在途任务结束、
+  关闭日志器（顺序见 §18）。
+
+---
+
+## 18. 定时任务（`internal/cron`）
+
+进程内调度器，**不是**持久化任务队列：任务在各任务文件的 `init()` 中注册，
+由 `bootstrap` 统一启停；仅进程内使用，不对外暴露。本节描述当前实现，新增任务按此执行。
+
+### 注册 Job
+
+```go
+func init() {
+	Register(Job{
+		Name:       "xxx",           // 任务名，用于日志排障
+		Interval:   5 * time.Minute, // > 0 周期；<= 0 一次性
+		RunOnStart: true,            // 周期任务是否在启动时立即执行一次
+		Fn:         xxx,             // func(ctx context.Context) error，同步执行完成
+	})
+}
+```
+
+| 字段 | 约定 |
+| --- | --- |
+| `Name` | 稳定可读，仅用于日志排障 |
+| `Interval` | `> 0`：周期任务，从**上次执行结束**才重新计时，同一 Job 串行、不并发重入，单次超时也不会补跑；`<= 0`：一次性任务，`SetUp` 时执行一次后 goroutine 即退出 |
+| `RunOnStart` | 仅对周期任务有效；一次性任务忽略此字段 |
+| `Fn` | 同步执行完成并返回 `error`；错误与 panic 由 `runJob` 统一记录（panic 被 recover，不会中断后续调度、不会拖垮进程） |
+
+约束：
+
+1. `Interval <= 0` 表示一次性任务，**不是**「零间隔的周期任务」；需要重复执行必须给正的 `Interval`。
+2. `Fn` 内不要自行 `go func(...)` 派生协程：`WaitGroup` 只跟踪调度 goroutine，派生协程不受优雅退出约束。
+3. 任务逻辑复用既有分层：不直接操作 DB、不引用 `*gin.Context`，需要业务能力时走 `services` 层。
+4. 周期任务写成幂等：进程重启会重新计时，`RunOnStart=true` 时启动即执行一次；任务本身要能安全重跑。
+
+### 启停接线（顺序固定）
+
+| 阶段 | 调用 | 约束 |
+| --- | --- | --- |
+| 启动 | `bootstrap.Initialize()` 末尾 `cron.SetUp()` | 必须在其余初始化全部完成之后 |
+| 停止 | `bootstrap.Close()`：`xdb.CloseDB()` → `cron.ShutDown()` → 关闭 `xlog.Xlogger` | `ShutDown()` 是**等待在途任务跑完**（`wg.Wait()`）而非打断，且会打 `cron stopped` 收尾日志，因此必须排在关闭日志器之前 |
+
+`SetUp()` / `ShutDown()` 各调用一次，业务代码不得自行调用；`ShutDown()` 由 `main` 的
+`defer bootstrap.Close()` 触发，因此 `cron stopped` 是进程退出前的最后一条日志。
+
+### 可观察性
+
+| 事件 | 日志 |
+| --- | --- |
+| 启动 | `cron setup done, jobs=N` |
+| 每次执行结束 | `cron job=<name> finished cost=<dur>` |
+| 执行出错 | `cron job=<name> err: ...` / `cron job=<name> panic: ...` |
+| 停止 | `cron stopped` |

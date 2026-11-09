@@ -9,12 +9,13 @@ import (
 )
 
 // Job 定时任务定义。
-// 每个 Job 独占一个 goroutine，由调度器按间隔串行驱动：
+// 每个 Job 独占一个 goroutine，周期任务由调度器按间隔串行驱动：
 // 上一次执行结束后才重新计时，因此既不会并发重入，也不会因单次执行超时而背靠背连跑。
+// Interval <= 0 为一次性任务：SetUp 时执行一次后 goroutine 即退出。
 type Job struct {
 	Name       string                          // 任务名，用于日志排障
-	Interval   time.Duration                   // 执行间隔（从上次执行结束开始计时）
-	RunOnStart bool                            // 是否在启动时立即执行一次
+	Interval   time.Duration                   // 执行间隔（从上次执行结束开始计时）；<= 0 表示一次性任务，SetUp 时执行一次即退出
+	RunOnStart bool                            // 周期任务是否在启动时立即执行一次；一次性任务忽略此字段
 	Fn         func(ctx context.Context) error // 任务逻辑，需同步执行完成
 }
 
@@ -38,13 +39,19 @@ func SetUp() {
 		wg.Add(1)
 		go func(j Job) {
 			defer wg.Done()
-			timer := time.NewTimer(j.Interval)
-			defer timer.Stop()
-
+			// Interval <= 0 表示一次性任务：执行完这次就退出，不进入周期循环。
+			// 忽略 RunOnStart：一次性任务没有周期，其语义就是 SetUp 时执行一次。
+			if j.Interval <= 0 {
+				runJob(j)
+				return
+			}
 			// 启动后立即执行一次（可选项），随后进入定时循环
 			if j.RunOnStart {
 				runJob(j)
 			}
+
+			timer := time.NewTimer(j.Interval)
+			defer timer.Stop()
 
 			for {
 				select {
@@ -75,7 +82,7 @@ func ShutDown() {
 
 // runJob 执行单个任务：panic 恢复 + 耗时与错误日志。
 // recover 必须在此处（而非 goroutine 顶部）：否则 panic 后 goroutine 直接退出，
-// 该任务将永远失去调度。
+// 周期任务将永远失去调度；一次性任务也能避免一次 panic 拖垮整个进程。
 func runJob(j Job) {
 	start := time.Now()
 	defer func() {
