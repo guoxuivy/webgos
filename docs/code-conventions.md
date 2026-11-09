@@ -4,22 +4,7 @@
 
 ## 1. 前言
 
-为形成公司统一的 Go 编码风格，以保障公司项目代码的易维护性和编码安全性，特制定本规范。
-
-本规范在 [Google Golang 代码规范](https://github.com/golang/go/wiki/CodeReviewComments) 的基础上，根据腾讯实际情况进行了调整和补充。
-
-每项规范内容，给出了要求等级，其定义为：
-- **必须（Mandatory）**：用户必须采用，代码扫描工具应将其视为错误；
-- **推荐（Preferable）**：用户理应采用，但如有特殊情况，可以不采用，代码扫描工具不应将其视为错误；
-- **可选（Optional）**：用户可参考，自行决定是否采用；
-
-目前本规范以 Gometalinter 工具落地，点击查看[工具源码](https://git.code.oa.com/codecheck-tools/goml_scan/tree/test)。
-
-本文档仅供腾讯产品开发内部使用，禁止对外提供、商用或分发。
-
-License
-
-查看 [LICENSE](./LICENSE) 文件了解注明和鸣谢信息。
+为形成公司统一的 Go 编码风格，以保障项目代码的易维护性和编码安全性，特制定本规范。
 
 
 ## 2. 代码风格
