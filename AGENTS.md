@@ -14,10 +14,10 @@
 
 1. 读本文件。
 2. **改后端代码前，必读 [`docs/backend-conventions.md`](docs/backend-conventions.md)**（后端业务流程规范唯一权威源）。
-2. **改后端代码前，必读 [`docs/code-conventions.md`](docs/backend-conventions.md)**（后端goalng代码规范唯一权威源）。
-3. 按 [文档路由表](#文档路由表) 找到本次影响面对应的材料。
-4. 判断是否需要填一页纸 change（见 [§ 什么时候填 change](#什么时候填-change)）。
-5. `git status --short` 确认工作树干净，跑一次基线 `make check`。
+3. **改后端代码前，必读 [`docs/code-conventions.md`](docs/backend-conventions.md)**（后端goalng代码规范唯一权威源）。
+4. 按 [文档路由表](#文档路由表) 找到本次影响面对应的材料。
+5. 判断是否需要填一页纸 change（见 [§ 什么时候填 change](#什么时候填-change)）。
+6. `git status --short` 确认工作树干净，跑一次基线 `make check`。
 
 ---
 
