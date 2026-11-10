@@ -4,7 +4,7 @@
 
 ## 1. 前言
 
-为形成公司统一的 Go 编码风格，以保障项目代码的易维护性和编码安全性，特制定本规范。
+为形成统一的 Go 编码风格，以保障项目代码的易维护性和编码安全性，特制定本规范。
 
 
 ## 2. 代码风格
@@ -36,11 +36,11 @@
 
     ```go
     // 长的字符串可以超过列数限制
-    pubkey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDPqE4yo8w7lezTpCkTt40whHoubL+0Qhsq1L3hF/lDW8zx1NpFTR9fC1HOqmUXj7tqPVg2xOAH+..."
+    pubkey := "ssh-rsa AAAAB3NzaC1yc2EAAF/lDW8zx1NpFTR9fC1HOqmUXj7tqPVg2xOAH+..."
 
     // 不要为了满足推荐列数换行并拼接字符串！
-    pubkey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDPqE4yo8w7lezTpCkTt40whHoubL+0Qhsq1L3hF/lDW8zx1NpFTR9fC1HOqmUXj7tqPVg2xOAH+"+
-    "zi2SqaZVeeXmsF5GAGFJcUylujr78Wf6od8//SApYx8RCSkRhGo8cTsxADlBCoTttJvk6Ocmy+uqEFXulsI0j+nh2x352eCExlDSqr0Me0J0LIGq/u9eqwhNN5k"+
+    pubkey := "ssh-rsa AAAAB3NzaC1yc2EAAA1L3hF/lDW8zx1NpFTR9fC1HOqmUXj7tqPVg2xOAH+"+
+    "zi2SqaZVeeXmsF5GAGFJcUylujr78qEFXulsI0j+nh2x352eCExlDSqr0Me0J0LIGq/u9eqwhNN5k"+
     ... // 按列换行不会使代码更加可读，但会使字符串的搜索和修改更加困难！
 
     // 长的多行文本可以考虑使用原始字符串字面量
@@ -287,7 +287,7 @@ func main() {
 }
 ```
 
-### 2.6 【非必须】单元测试
+### 2.6 【推荐】单元测试
 - 单元测试文件名命名规范为 `example_test.go`。
 
 - 测试用例的函数名称必须以 `Test` 开头，例如 `TestExample`。
